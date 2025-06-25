@@ -68,6 +68,8 @@ export default function ChatsScreen() {
   const [company, setCompany] = useState<Company | null>(null);
   const [showPointsModal, setShowPointsModal] = useState(false);
   const [customPointsAmount, setCustomPointsAmount] = useState('');
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState<'open' | 'pending' | 'escalated' | 'closed'>('open');
 
   // Initialize with mock data for testing
   useEffect(() => {
@@ -114,7 +116,7 @@ export default function ChatsScreen() {
         lastMessage: 'I received the wrong size for one of the items. How can I exchange it?',
         lastMessageTime: '10:35 AM',
         unreadCount: 1,
-        status: 'active',
+        status: 'open',
       },
       {
         id: '2',
@@ -158,7 +160,7 @@ export default function ChatsScreen() {
         lastMessage: 'Perfect, thank you for the quick response!',
         lastMessageTime: '9:52 AM',
         unreadCount: 0,
-        status: 'resolved',
+        status: 'closed',
       },
       {
         id: '3',
@@ -239,7 +241,7 @@ export default function ChatsScreen() {
         lastMessage: 'My new address is 123 Oak Street, Springfield, IL 62701',
         lastMessageTime: 'Yesterday 4:40 PM',
         unreadCount: 1,
-        status: 'active',
+        status: 'escalated',
       },
     ];
 
@@ -317,6 +319,23 @@ export default function ChatsScreen() {
     setShowPointsModal(false);
   };
 
+  const handleStatusChange = (newStatus: 'open' | 'pending' | 'escalated' | 'closed') => {
+    if (!selectedConversation) return;
+    
+    const updatedConversation = {
+      ...selectedConversation,
+      status: newStatus
+    };
+    
+    setSelectedConversation(updatedConversation);
+    setConversations(prev => 
+      prev.map(conv => conv.id === selectedConversation.id ? updatedConversation : conv)
+    );
+    
+    setShowStatusModal(false);
+    Alert.alert('Status Updated', `Conversation status changed to ${newStatus}`);
+  };
+
   const getMoodIcon = (mood: string) => {
     switch (mood) {
       case 'happy': return <Smile size={16} color="#27AE60" />;
@@ -356,9 +375,10 @@ export default function ChatsScreen() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return '#27AE60';
-      case 'resolved': return '#95A5A6';
+      case 'open': return '#27AE60';
+      case 'closed': return '#95A5A6';
       case 'pending': return '#F39C12';
+      case 'escalated': return '#E74C3C';
       default: return '#666666';
     }
   };
@@ -396,9 +416,12 @@ export default function ChatsScreen() {
             <Text style={styles.conversationCount}>{conversations.length}</Text>
           </View>
           
-          <FlatList
-            data={conversations}
-            keyExtractor={(item) => item.id}
+          <TouchableOpacity 
+            style={[styles.chatStatusBadge, { backgroundColor: getStatusColor(selectedConversation.status) }]}
+            onPress={() => setShowStatusModal(true)}
+          >
+            <Text style={styles.chatStatusText}>{selectedConversation.status.toUpperCase()}</Text>
+          </TouchableOpacity>
             showsVerticalScrollIndicator={false}
             renderItem={({ item }) => (
               <TouchableOpacity
@@ -726,6 +749,81 @@ export default function ChatsScreen() {
         </View>
       </Modal>
     </SafeAreaView>
+      {/* Status Change Modal */}
+      <Modal
+        visible={showStatusModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowStatusModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.statusModal}>
+            <View style={styles.statusModalHeader}>
+              <Text style={styles.statusModalTitle}>Change Status</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowStatusModal(false)}
+              >
+                <X size={20} color="#666666" />
+              </TouchableOpacity>
+            </View>
+            
+            <Text style={styles.statusModalSubtitle}>
+              Update conversation status for {selectedConversation?.customer.name}
+            </Text>
+            
+            <View style={styles.statusOptions}>
+              {[
+                { value: 'open', label: 'Open', description: 'Active conversation requiring attention', color: '#27AE60' },
+                { value: 'pending', label: 'Pending', description: 'Waiting for customer response', color: '#F39C12' },
+                { value: 'escalated', label: 'Escalated', description: 'Requires manager or specialist attention', color: '#E74C3C' },
+                { value: 'closed', label: 'Closed', description: 'Issue resolved and conversation complete', color: '#95A5A6' },
+              ].map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.statusOption,
+                    selectedStatus === option.value && styles.statusOptionSelected,
+                    { borderColor: option.color }
+                  ]}
+                  onPress={() => setSelectedStatus(option.value as any)}
+                >
+                  <View style={styles.statusOptionContent}>
+                    <View style={styles.statusOptionHeader}>
+                      <View style={[styles.statusIndicator, { backgroundColor: option.color }]} />
+                      <Text style={[
+                        styles.statusOptionLabel,
+                        selectedStatus === option.value && { color: option.color }
+                      ]}>
+                        {option.label}
+                      </Text>
+                    </View>
+                    <Text style={styles.statusOptionDescription}>
+                      {option.description}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+            
+            <View style={styles.statusModalActions}>
+              <TouchableOpacity
+                style={styles.statusModalCancel}
+                onPress={() => setShowStatusModal(false)}
+              >
+                <Text style={styles.statusModalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.statusModalConfirm}
+                onPress={() => handleStatusChange(selectedStatus)}
+              >
+                <Text style={styles.statusModalConfirmText}>Update Status</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
   );
 }
 
@@ -1277,6 +1375,98 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   pointsModalConfirmText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  statusModal: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 500,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  statusModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  statusModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  statusModalSubtitle: {
+    fontSize: 14,
+    color: '#CCCCCC',
+    marginBottom: 20,
+  },
+  statusOptions: {
+    gap: 12,
+    marginBottom: 24,
+  },
+  statusOption: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#3A3A3A',
+  },
+  statusOptionSelected: {
+    backgroundColor: '#1A2A1A',
+  },
+  statusOptionContent: {
+    gap: 8,
+  },
+  statusOptionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  statusIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  statusOptionLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  statusOptionDescription: {
+    fontSize: 14,
+    color: '#CCCCCC',
+    lineHeight: 20,
+  },
+  statusModalActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  statusModalCancel: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#2A2A2A',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#3A3A3A',
+  },
+  statusModalCancelText: {
+    color: '#CCCCCC',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  statusModalConfirm: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#5ce1e6',
+    alignItems: 'center',
+  },
+  statusModalConfirmText: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
