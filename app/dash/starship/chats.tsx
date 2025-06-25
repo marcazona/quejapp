@@ -384,6 +384,7 @@ export default function ChatsScreen() {
   };
 
   return (
+    <>
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1a1a1a" />
       
@@ -748,7 +749,7 @@ export default function ChatsScreen() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+
       {/* Status Change Modal */}
       <Modal
         visible={showStatusModal}
@@ -824,6 +825,8 @@ export default function ChatsScreen() {
           </View>
         </View>
       </Modal>
+    </SafeAreaView>
+    </>
   );
 }
 
