@@ -15,9 +15,10 @@ function StarshipTabBar() {
   }
 
   const tabs = [
-    { name: 'tickets', label: 'Tickets', icon: AlertTriangle },
     { name: 'chats', label: 'Chats', icon: MessageCircle },
+    { name: 'tickets', label: 'Tickets', icon: AlertTriangle },
     { name: 'marketing', label: 'Marketing', icon: BarChart3 },
+    { name: 'reports', label: 'Reports', icon: BarChart3 },
     { name: 'settings', label: 'Settings', icon: Settings },
   ];
 
