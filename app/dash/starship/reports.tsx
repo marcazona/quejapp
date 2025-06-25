@@ -10,24 +10,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { router } from 'expo-router';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  Users, 
-  MessageCircle, 
-  Star, 
-  ChartBar as BarChart3, 
-  ChartPie as PieChart, 
-  Calendar,
-  Download,
-  Filter,
-  RefreshCw,
-  Clock,
-  Target,
-  Award,
-  DollarSign,
-  AlertTriangle
-} from 'lucide-react-native';
+import { TrendingUp, TrendingDown, Users, MessageCircle, Star, ChartBar as BarChart3, ChartPie as PieChart, Calendar, Download, Filter, RefreshCw, Clock, Target, Award, DollarSign, TriangleAlert as AlertTriangle } from 'lucide-react-native';
 import { useCompanyAuth } from '@/contexts/CompanyAuthContext';
 
 const { width } = Dimensions.get('window');
