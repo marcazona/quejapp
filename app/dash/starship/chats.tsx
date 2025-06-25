@@ -417,12 +417,9 @@ export default function ChatsScreen() {
             <Text style={styles.conversationCount}>{conversations.length}</Text>
           </View>
           
-          <TouchableOpacity 
-            style={[styles.chatStatusBadge, { backgroundColor: getStatusColor(selectedConversation.status) }]}
-            onPress={() => setShowStatusModal(true)}
-          >
-            <Text style={styles.chatStatusText}>{selectedConversation.status.toUpperCase()}</Text>
-          </TouchableOpacity>
+          <FlatList
+            data={conversations}
+            keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
             renderItem={({ item }) => (
               <TouchableOpacity
@@ -492,9 +489,12 @@ export default function ChatsScreen() {
                       </Text>
                     </View>
                   </View>
-                  <View style={[styles.chatStatusBadge, { backgroundColor: getStatusColor(selectedConversation.status) }]}>
+                  <TouchableOpacity 
+                    style={[styles.chatStatusBadge, { backgroundColor: getStatusColor(selectedConversation.status) }]}
+                    onPress={() => setShowStatusModal(true)}
+                  >
                     <Text style={styles.chatStatusText}>{selectedConversation.status.toUpperCase()}</Text>
-                  </View>
+                  </TouchableOpacity>
                 </View>
 
                 {/* Messages */}
