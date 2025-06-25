@@ -15,7 +15,6 @@ function StarshipTabBar() {
   }
 
   const tabs = [
-    { name: 'dashboard', label: 'Overview', icon: Building2 },
     { name: 'tickets', label: 'Tickets', icon: AlertTriangle },
     { name: 'chats', label: 'Chats', icon: MessageCircle },
     { name: 'marketing', label: 'Marketing', icon: BarChart3 },
@@ -23,6 +22,10 @@ function StarshipTabBar() {
   ];
 
   const isActive = (tabName: string) => {
+    // If we're at the root starship path (after login), consider chats as active
+    if (pathname === '/dash/starship' && tabName === 'chats') {
+      return true;
+    }
     return pathname === `/dash/starship/${tabName}`;
   };
 

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,11 +19,18 @@ import { Eye, EyeOff, Mail, Lock, ArrowRight, Building2, Shield, Zap, MessageCir
 import { useCompanyAuth, CompanyAuthProvider } from '@/contexts/CompanyAuthContext';
 
 const LoginForm = () => {
-  const { signIn, isLoading, error, clearError } = useCompanyAuth();
+  const { signIn, isLoading, error, clearError, isAuthenticated } = useCompanyAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+
+  // Redirect to chats if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace('/dash/starship/chats');
+    }
+  }, [isAuthenticated]);
 
   const validateForm = () => {
     const newErrors: { email?: string; password?: string } = {};
@@ -46,7 +54,7 @@ const LoginForm = () => {
 
     try {
       await signIn(email, password);
-      router.replace('/dash/starship/dashboard');
+      router.replace('/dash/starship/chats');
     } catch (error: any) {
       // Error is handled by context
     }
