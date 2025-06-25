@@ -553,7 +553,6 @@ export default function PostsScreen() {
                     >
                       <Text style={styles.statusButtonText}>{selectedPost.status.replace('_', ' ').toUpperCase()}</Text>
                     </TouchableOpacity>
-                  </div>
                 </View>
 
                 {/* Post Content */}
