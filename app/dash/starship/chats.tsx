@@ -10,7 +10,7 @@ import {
   Platform,
   SafeAreaView,
 } from 'react-native';
-import { Send, MoreVertical, Phone, Video } from 'lucide-react-native';
+import { Send, MoveVertical as MoreVertical, Phone, Video } from 'lucide-react-native';
 
 interface Message {
   id: string;
