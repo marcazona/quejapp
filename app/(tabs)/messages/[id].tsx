@@ -933,7 +933,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 16,
   },
-    backgroundColor: '#1A1A1A',
+  userBubble: {
     backgroundColor: '#5ce1e6',
     borderBottomRightRadius: 4,
   },
