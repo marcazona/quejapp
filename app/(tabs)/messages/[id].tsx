@@ -933,7 +933,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 16,
   },
-  userBubble: {
+    backgroundColor: '#1A1A1A',
     backgroundColor: '#5ce1e6',
     borderBottomRightRadius: 4,
   },
@@ -944,22 +944,12 @@ const styles = StyleSheet.create({
   messageText: {
     fontSize: 16,
     lineHeight: 20,
-  },
-  userText: {
-    color: '#000000',
-  },
-  companyText: {
     color: '#FFFFFF',
   },
   timeText: {
     fontSize: 12,
     marginTop: 4,
     opacity: 0.7,
-  },
-  userTimeText: {
-    color: '#000000',
-  },
-  companyTimeText: {
     color: '#FFFFFF',
   },
   reactionsContainer: {
