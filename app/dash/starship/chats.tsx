@@ -1429,11 +1429,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  statusIndicator: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
   statusOptionLabel: {
     fontSize: 16,
     fontWeight: '600',
