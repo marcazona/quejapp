@@ -1065,7 +1065,7 @@ const styles = StyleSheet.create({
   },
   supportMessage: {
     alignSelf: 'flex-end',
-    backgroundColor: '#5ce1e6',
+    backgroundColor: '#1A1A1A',
     borderRadius: 16,
     borderBottomRightRadius: 4,
     padding: 12,
@@ -1075,14 +1075,14 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     lineHeight: 22,
   },
-  messageTimestamp: {
+    color: '#FFFFFF',
     fontSize: 12,
     color: '#CCCCCC',
     marginTop: 6,
     opacity: 0.7,
   },
   messageInput: {
-    flexDirection: 'row',
+    color: '#FFFFFF',
     alignItems: 'flex-end',
     padding: 16,
     backgroundColor: '#1A1A1A',
