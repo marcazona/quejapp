@@ -17,30 +17,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { router } from 'expo-router';
-import { 
-  ShoppingBag, 
-  Plus, 
-  Search, 
-  Filter, 
-  Tag, 
-  DollarSign, 
-  Pencil, 
-  Trash2, 
-  Eye, 
-  Share2, 
-  MessageCircle, 
-  ChevronRight, 
-  X, 
-  Save, 
-  Camera, 
-  Package, 
-  Briefcase, 
-  BarChart4, 
-  Clock, 
-  ArrowUpRight, 
-  Megaphone,
-  Zap
-} from 'lucide-react-native';
+import { ShoppingBag, Plus, Search, Filter, Tag, DollarSign, Pencil, Trash2, Eye, Share2, MessageCircle, ChevronRight, X, Save, Camera, Package, Briefcase, ChartBar as BarChart4, Clock, ArrowUpRight, Megaphone, Zap } from 'lucide-react-native';
 import { useCompanyAuth } from '@/contexts/CompanyAuthContext';
 
 const { width } = Dimensions.get('window');
