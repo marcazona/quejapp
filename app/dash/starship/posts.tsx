@@ -708,16 +708,6 @@ export default function PostsScreen() {
                     </View>
 
                     <View style={styles.sessionItem}>
-                      <Eye size={14} color="#9B59B6" />
-                      <View style={styles.sessionItemContent}>
-                        <Text style={styles.sessionItemLabel}>Session Duration</Text>
-                        <Text style={styles.sessionItemValue}>
-                          {selectedPost.customer.sessionDuration}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.sessionItem}>
                       <User size={14} color="#3498DB" />
                       <View style={styles.sessionItemContent}>
                         <Text style={styles.sessionItemLabel}>Device & Location</Text>
