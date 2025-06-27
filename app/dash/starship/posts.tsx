@@ -7,7 +7,6 @@ import {
   FlatList,
   TextInput,
   SafeAreaView,
- ]
  StatusBar,
   PanResponder,
   Dimensions,
@@ -1679,13 +1678,13 @@ const styles = StyleSheet.create({
                         {selectedPost.customer.totalPosts}
                       </Text>
                     </View>
+                    <View style={styles.statRow}>
                     <View style={styles.statItem}>
                       <Text style={styles.statLabel}>Member Since</Text>
                       <Text style={styles.statValue}>
                         {new Date(selectedPost.customer.joinDate).toLocaleDateString()}
                       </Text>
                     </View>
-                  </View>
                 </View>
               </View>
             </View>
