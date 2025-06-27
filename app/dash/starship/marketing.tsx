@@ -15,39 +15,7 @@ import {
   Switch,
 } from 'react-native';
 import { router } from 'expo-router';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  Eye, 
-  Users, 
-  MessageCircle, 
-  Star, 
-  ChartBar as BarChart3, 
-  ChartPie as PieChart, 
-  Calendar, 
-  Download, 
-  Filter, 
-  RefreshCw, 
-  Clock, 
-  Target, 
-  Award, 
-  DollarSign, 
-  TriangleAlert as AlertTriangle,
-  Edit3,
-  Save,
-  X,
-  Plus,
-  Building2,
-  Globe,
-  Phone,
-  Mail,
-  MapPin,
-  Camera,
-  Zap,
-  Crown,
-  Sparkles,
-  Shield
-} from 'lucide-react-native';
+import { TrendingUp, TrendingDown, Eye, Users, MessageCircle, Star, ChartBar as BarChart3, ChartPie as PieChart, Calendar, Download, Filter, RefreshCw, Clock, Target, Award, DollarSign, TriangleAlert as AlertTriangle, CreditCard as Edit3, Save, X, Plus, Building2, Globe, Phone, Mail, MapPin, Camera, Zap, Crown, Sparkles, Shield } from 'lucide-react-native';
 import { useCompanyAuth } from '@/contexts/CompanyAuthContext';
 
 const { width } = Dimensions.get('window');
