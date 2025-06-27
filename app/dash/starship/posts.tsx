@@ -16,7 +16,7 @@ import {
   Image,
 } from 'react-native';
 import { router } from 'expo-router';
-import { ArrowLeft, MoveVertical as MoreVertical, Send, Star, User, Globe, Eye, Smile, Frown, Meh, X, Plus, Search, Filter, Calendar, Tag, MessageCircle, TriangleAlert as AlertTriangle, Clock, Shield, ThumbsUp, ThumbsDown } from 'lucide-react-native';
+import { ArrowLeft, MoveVertical as MoreVertical, Send, Star, User, Globe, Eye, Smile, Frown, Meh, X, Plus, Search, Filter, Calendar, Tag, MessageCircle, TriangleAlert as AlertTriangle, Clock, Shield, ThumbsUp, ThumbsDown, Gift } from 'lucide-react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MIN_SIDEBAR_WIDTH = 280;
@@ -84,6 +84,8 @@ export default function PostsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'review' | 'claim' | 'question' | 'complaint'>('all');
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'new' | 'in_progress' | 'resolved' | 'closed'>('all');
+  const [showPointsModal, setShowPointsModal] = useState(false);
+  const [customPointsAmount, setCustomPointsAmount] = useState('');
 
   // Initialize with mock data for testing
   useEffect(() => {
@@ -237,6 +239,46 @@ export default function PostsScreen() {
       prev.map(post => post.id === selectedPost.id ? updatedPost : post)
     );
     setNewReply('');
+  };
+
+  const handleAwardCoins = (customerId: string, amount: number) => {
+    if (!selectedPost) return;
+
+    const updatedCustomer = {
+      ...selectedPost.customer,
+      loyaltyPoints: selectedPost.customer.loyaltyPoints + amount
+    };
+
+    const updatedPost = {
+      ...selectedPost,
+      customer: updatedCustomer
+    };
+    
+    setSelectedPost(updatedPost);
+    setPosts(prev => 
+      prev.map(post => post.id === selectedPost.id ? updatedPost : post)
+    );
+
+    Alert.alert('Success', `Awarded ${amount} loyalty points to ${selectedPost.customer.name}`);
+  };
+
+  const handleCustomPointsAward = () => {
+    if (!selectedPost || !customPointsAmount.trim()) return;
+    
+    const amount = parseInt(customPointsAmount);
+    if (isNaN(amount) || amount <= 0) {
+      Alert.alert('Invalid Amount', 'Please enter a valid positive number');
+      return;
+    }
+    
+    if (amount > 1000) {
+      Alert.alert('Amount Too High', 'Maximum award amount is 1000 points');
+      return;
+    }
+    
+    handleAwardCoins(selectedPost.customer.id, amount);
+    setCustomPointsAmount('');
+    setShowPointsModal(false);
   };
 
   const handleStatusChange = (postId: string, newStatus: 'new' | 'in_progress' | 'resolved' | 'closed') => {
@@ -687,13 +729,992 @@ export default function PostsScreen() {
                   </View>
 
                   <View style={styles.customerStats}>
-                    <View style={styles.statItem}>
+                    <View style={styles.statRow}>
                       <Text style={styles.statLabel}>Points Balance</Text>
                       <Text style={styles.statValue}>
                         {selectedPost.customer.loyaltyPoints}
                       </Text>
                     </View>
-                    <View style={styles.statItem}>
+                    
+                    <View style={styles.statRow}>
+                      <Text style={styles.statLabel}>Last Active</Text>
+                      <Text style={styles.statValue}>
+                        {selectedPost.customer.lastActive}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.customerActions}>
+                    <Text style={styles.actionsTitle}>Fidelity/Retention</Text>
+                    
+                    <View style={styles.quickActions}>
+                      <TouchableOpacity
+                        style={styles.quickActionButton}
+                        onPress={() => handleAwardCoins(selectedPost.customer.id, 5)}
+                      >
+                        <Text style={styles.quickActionText}>+5</Text>
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity
+                        style={styles.quickActionButton}
+                        onPress={() => handleAwardCoins(selectedPost.customer.id, 10)}
+                      >
+                        <Text style={styles.quickActionText}>+10</Text>
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity
+                        style={styles.quickActionButton}
+                        onPress={() => handleAwardCoins(selectedPost.customer.id, 25)}
+                      >
+                        <Text style={styles.quickActionText}>+25</Text>
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity
+                        style={[styles.quickActionButton, styles.customActionButton]}
+                        onPress={() => setShowPointsModal(true)}
+                      >
+                        <Plus size={16} color="#FFFFFF" />
+                      </TouchableOpacity>
+                    </View>
+
+                    <TouchableOpacity
+                      style={styles.primaryActionButton}
+                      onPress={() => handleAwardCoins(selectedPost.customer.id, 50)}
+                    >
+                      <Gift size={16} color="#FFFFFF" />
+                      <Text style={styles.actionButtonText}>Award</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.noPostSelected}>
+              <MessageCircle size={64} color="#666666" />
+              <Text style={styles.noPostText}>Select a post to view details</Text>
+              <Text style={styles.noPostSubtext}>
+                Choose from {filteredPosts.length} posts
+              </Text>
+            </View>
+          )}
+        </View>
+      </View>
+
+      {/* Custom Points Award Modal */}
+      <Modal
+        visible={showPointsModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPointsModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.pointsModal}>
+            <View style={styles.pointsModalHeader}>
+              <Text style={styles.pointsModalTitle}>Award Custom Points</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowPointsModal(false)}
+              >
+                <X size={20} color="#666666" />
+              </TouchableOpacity>
+            </View>
+            
+            <Text style={styles.pointsModalSubtitle}>
+              Award points to {selectedPost?.customer.name}
+            </Text>
+            
+            <View style={styles.pointsInputContainer}>
+              <TextInput
+                style={styles.pointsInput}
+                value={customPointsAmount}
+                onChangeText={setCustomPointsAmount}
+                placeholder="Enter amount (1-1000)"
+                placeholderTextColor="#666666"
+                keyboardType="numeric"
+                maxLength={4}
+                autoFocus
+              />
+              <Text style={styles.pointsInputLabel}>Points</Text>
+            </View>
+            
+            <View style={styles.pointsModalActions}>
+              <TouchableOpacity
+                style={styles.pointsModalCancel}
+                onPress={() => setShowPointsModal(false)}
+              >
+                <Text style={styles.pointsModalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[
+                  styles.pointsModalConfirm,
+                  !customPointsAmount.trim() && styles.pointsModalConfirmDisabled
+                ]}
+                onPress={handleCustomPointsAward}
+                disabled={!customPointsAmount.trim()}
+              >
+                <Gift size={16} color="#FFFFFF" />
+                <Text style={styles.pointsModalConfirmText}>Award Points</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Status Change Modal */}
+      <Modal
+        visible={showStatusModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowStatusModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.statusModal}>
+            <View style={styles.statusModalHeader}>
+              <Text style={styles.statusModalTitle}>Change Status</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowStatusModal(false)}
+              >
+                <X size={20} color="#666666" />
+              </TouchableOpacity>
+            </View>
+            
+            <Text style={styles.statusModalSubtitle}>
+              Update post status for {selectedPost?.customer.name}
+            </Text>
+            
+            <View style={styles.statusOptions}>
+              {[
+                { value: 'new', label: 'New', description: 'Recently submitted post requiring attention', color: '#E67E22' },
+                { value: 'in_progress', label: 'In Progress', description: 'Currently being reviewed or worked on', color: '#3498DB' },
+                { value: 'resolved', label: 'Resolved', description: 'Issue has been addressed and resolved', color: '#27AE60' },
+                { value: 'closed', label: 'Closed', description: 'Post is complete and no further action needed', color: '#95A5A6' },
+              ].map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.statusOption,
+                    selectedStatus === option.value && styles.statusOptionSelected,
+                    { borderColor: option.color }
+                  ]}
+                  onPress={() => setSelectedStatus(option.value as any)}
+                >
+                  <View style={styles.statusOptionContent}>
+                    <View style={styles.statusOptionHeader}>
+                      <View style={[styles.statusIndicator, { backgroundColor: option.color }]} />
+                      <Text style={[
+                        styles.statusOptionLabel,
+                        selectedStatus === option.value && { color: option.color }
+                      ]}>
+                        {option.label}
+                      </Text>
+                    </View>
+                    <Text style={styles.statusOptionDescription}>
+                      {option.description}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+            
+            <View style={styles.statusModalActions}>
+              <TouchableOpacity
+                style={styles.statusModalCancel}
+                onPress={() => setShowStatusModal(false)}
+              >
+                <Text style={styles.statusModalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.statusModalConfirm}
+                onPress={() => handleStatusChange(selectedStatus)}
+              >
+                <Text style={styles.statusModalConfirmText}>Update Status</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0A0A0A',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#1A1A1A',
+    borderBottomWidth: 1,
+    borderBottomColor: '#2A2A2A',
+    marginTop: 60, // Account for tab bar
+  },
+  backButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#2A2A2A',
+  },
+  headerContent: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#CCCCCC',
+    marginTop: 2,
+  },
+  headerAction: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#2A2A2A',
+  },
+  content: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  sidebar: {
+    backgroundColor: '#1A1A1A',
+    borderRightWidth: 1,
+    borderRightColor: '#2A2A2A',
+  },
+  sidebarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2A2A2A',
+  },
+  sidebarTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  postCount: {
+    fontSize: 14,
+    color: '#5ce1e6',
+    fontWeight: '600',
+  },
+  searchContainer: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2A2A2A',
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2A2A2A',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 12,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#FFFFFF',
+  },
+  filters: {
+    flexDirection: 'row',
+  },
+  filterChip: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#3A3A3A',
+  },
+  activeFilterChip: {
+    backgroundColor: '#5ce1e6',
+    borderColor: '#5ce1e6',
+  },
+  filterChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#CCCCCC',
+  },
+  activeFilterChipText: {
+    color: '#FFFFFF',
+  },
+  postItem: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2A2A2A',
+  },
+  selectedPost: {
+    backgroundColor: '#2A2A2A',
+    borderRightWidth: 3,
+    borderRightColor: '#5ce1e6',
+  },
+  postHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  postType: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  postTypeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#666666',
+  },
+  postBadges: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  priorityBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  statusBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    textTransform: 'uppercase',
+  },
+  postTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 6,
+    lineHeight: 18,
+  },
+  postContent: {
+    fontSize: 12,
+    color: '#CCCCCC',
+    marginBottom: 8,
+    lineHeight: 16,
+  },
+  postMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  customerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  customerName: {
+    fontSize: 11,
+    color: '#CCCCCC',
+    fontWeight: '500',
+  },
+  postTime: {
+    fontSize: 11,
+    color: '#666666',
+  },
+  ratingContainer: {
+    marginBottom: 8,
+  },
+  stars: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  postStats: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  statText: {
+    fontSize: 11,
+    color: '#666666',
+  },
+  resizeHandle: {
+    width: 4,
+    backgroundColor: '#2A2A2A',
+    justifyContent: 'center',
+    alignItems: 'center',
+    cursor: 'col-resize',
+  },
+  resizeHandleActive: {
+    backgroundColor: '#5ce1e6',
+  },
+  resizeIndicator: {
+    width: 2,
+    height: 40,
+    backgroundColor: '#666666',
+    borderRadius: 1,
+  },
+  mainArea: {
+    flex: 1,
+    backgroundColor: '#0A0A0A',
+  },
+  postContainer: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  postDetailsArea: {
+    flex: 2,
+    backgroundColor: '#0A0A0A',
+  },
+  postDetailHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    padding: 16,
+    backgroundColor: '#1A1A1A',
+    borderBottomWidth: 1,
+    borderBottomColor: '#2A2A2A',
+  },
+  postDetailLeft: {
+    flex: 1,
+  },
+  postDetailType: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  postDetailTypeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666666',
+  },
+  postDetailTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  postDetailCategory: {
+    fontSize: 14,
+    color: '#5ce1e6',
+    fontWeight: '500',
+  },
+  postDetailActions: {
+    alignItems: 'flex-end',
+  },
+  statusButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  statusButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  postContentArea: {
+    flex: 1,
+    padding: 16,
+  },
+  postDetailContent: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    lineHeight: 24,
+    marginBottom: 20,
+  },
+  postRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  ratingLabel: {
+    fontSize: 14,
+    color: '#CCCCCC',
+    fontWeight: '600',
+  },
+  ratingStars: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  tagsContainer: {
+    marginBottom: 20,
+  },
+  tagsLabel: {
+    fontSize: 14,
+    color: '#CCCCCC',
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  tags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  tag: {
+    backgroundColor: '#2A2A2A',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#3A3A3A',
+  },
+  tagText: {
+    fontSize: 12,
+    color: '#CCCCCC',
+    fontWeight: '500',
+  },
+  repliesSection: {
+    marginBottom: 20,
+  },
+  repliesTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 12,
+  },
+  replyItem: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  replyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  replyAuthor: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#5ce1e6',
+  },
+  replyTime: {
+    fontSize: 12,
+    color: '#666666',
+  },
+  replyContent: {
+    fontSize: 14,
+    color: '#CCCCCC',
+    lineHeight: 20,
+  },
+  replyInput: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    padding: 16,
+    backgroundColor: '#1A1A1A',
+    borderTopWidth: 1,
+    borderTopColor: '#2A2A2A',
+    gap: 12,
+  },
+  replyTextInput: {
+    flex: 1,
+    backgroundColor: '#2A2A2A',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    color: '#FFFFFF',
+    fontSize: 16,
+    maxHeight: 100,
+    borderWidth: 1,
+    borderColor: '#3A3A3A',
+  },
+  sendButton: {
+    backgroundColor: '#5ce1e6',
+    borderRadius: 20,
+    padding: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sendButtonDisabled: {
+    backgroundColor: '#3A3A3A',
+    opacity: 0.5,
+  },
+  customerInfoPanel: {
+    width: 300,
+    backgroundColor: '#1A1A1A',
+    borderLeftWidth: 1,
+    borderLeftColor: '#2A2A2A',
+    padding: 16,
+  },
+  customerInfoTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 16,
+  },
+  customerCard: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#3A3A3A',
+  },
+  customerCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  customerCardAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#3A3A3A',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  customerCardInfo: {
+    flex: 1,
+  },
+  customerNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  customerCardName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  customerCardEmail: {
+    fontSize: 14,
+    color: '#CCCCCC',
+    marginBottom: 2,
+  },
+  customerCardPhone: {
+    fontSize: 14,
+    color: '#CCCCCC',
+  },
+  sessionInfo: {
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#3A3A3A',
+  },
+  sessionInfoTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#5ce1e6',
+    marginBottom: 12,
+  },
+  sessionItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  sessionItemContent: {
+    flex: 1,
+    marginLeft: 8,
+  },
+  sessionItemLabel: {
+    fontSize: 12,
+    color: '#999999',
+    marginBottom: 2,
+  },
+  sessionItemValue: {
+    fontSize: 13,
+    color: '#FFFFFF',
+    fontWeight: '500',
+  },
+  moodIconContainer: {
+    width: 14,
+    height: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  customerStats: {
+    gap: 8,
+    marginBottom: 16,
+  },
+  statRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#3A3A3A',
+  },
+  statLabel: {
+    fontSize: 14,
+    color: '#999999',
+  },
+  statValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  customerActions: {
+    gap: 12,
+  },
+  actionsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  quickActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  quickActionButton: {
+    flex: 1,
+    backgroundColor: '#3A3A3A',
+    paddingVertical: 8,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#4A4A4A',
+  },
+  customActionButton: {
+    backgroundColor: '#5ce1e6',
+    borderColor: '#5ce1e6',
+  },
+  quickActionText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  primaryActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#5ce1e6',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  actionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  noPostSelected: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  noPostText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  noPostSubtext: {
+    fontSize: 16,
+    color: '#666666',
+    textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  pointsModal: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  pointsModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  pointsModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  pointsModalSubtitle: {
+    fontSize: 14,
+    color: '#CCCCCC',
+    marginBottom: 20,
+  },
+  pointsInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2A2A2A',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#3A3A3A',
+  },
+  pointsInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  pointsInputLabel: {
+    fontSize: 14,
+    color: '#999999',
+    marginLeft: 8,
+  },
+  pointsModalActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  pointsModalCancel: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#2A2A2A',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#3A3A3A',
+  },
+  pointsModalCancelText: {
+    color: '#CCCCCC',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  pointsModalConfirm: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#5ce1e6',
+    gap: 8,
+  },
+  pointsModalConfirmDisabled: {
+    backgroundColor: '#3A3A3A',
+    opacity: 0.5,
+  },
+  pointsModalConfirmText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  statusModal: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 500,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  statusModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  statusModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  statusModalSubtitle: {
+    fontSize: 14,
+    color: '#CCCCCC',
+    marginBottom: 20,
+  },
+  statusOptions: {
+    gap: 12,
+    marginBottom: 24,
+  },
+  statusOption: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#3A3A3A',
+  },
+  statusOptionSelected: {
+    backgroundColor: '#1A2A1A',
+  },
+  statusOptionContent: {
+    gap: 8,
+  },
+  statusOptionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  statusIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  statusOptionLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  statusOptionDescription: {
+    fontSize: 14,
+    color: '#CCCCCC',
+    lineHeight: 20,
+  },
+  statusModalActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  statusModalCancel: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#2A2A2A',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#3A3A3A',
+  },
+  statusModalCancelText: {
+    color: '#CCCCCC',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  statusModalConfirm: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#5ce1e6',
+    alignItems: 'center',
+  },
+  statusModalConfirmText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+});
+
                       <Text style={styles.statLabel}>Total Posts</Text>
                       <Text style={styles.statValue}>
                         {selectedPost.customer.totalPosts}
