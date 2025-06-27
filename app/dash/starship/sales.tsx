@@ -15,9 +15,10 @@ import {
   FlatList,
   Switch,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
-import { ShoppingBag, Plus, Search, Filter, Tag, DollarSign, Pencil, Trash2, Eye, Share2, MessageCircle, ChevronRight, X, Save, Camera, Package, Briefcase, ChartBar as BarChart4, Clock, ArrowUpRight, Megaphone, Zap } from 'lucide-react-native';
+import { ShoppingBag, Plus, Search, Filter, Tag, DollarSign, Pencil, Trash2, Eye, Share2, MessageCircle, ChevronRight, X, Save, Camera, Package, Briefcase, ChartBar as BarChart4, Clock, ArrowUpRight, Megaphone, Zap, Grid, ArrowUp, ArrowDown, CheckCircle, AlertTriangle } from 'lucide-react-native';
 import { useCompanyAuth } from '@/contexts/CompanyAuthContext';
 
 const { width } = Dimensions.get('window');
@@ -40,6 +41,7 @@ interface Product {
   type: 'product' | 'service';
   options?: ProductOption[];
   shareLink?: string;
+  featured?: boolean;
 }
 
 interface ProductOption {
@@ -54,6 +56,35 @@ interface Category {
   count: number;
 }
 
+interface Order {
+  id: string;
+  customerName: string;
+  customerEmail: string;
+  items: OrderItem[];
+  total: number;
+  status: 'pending' | 'processing' | 'completed' | 'cancelled';
+  paymentStatus: 'paid' | 'unpaid' | 'refunded';
+  createdAt: string;
+}
+
+interface OrderItem {
+  id: string;
+  productId: string;
+  name: string;
+  price: number;
+  quantity: number;
+  options?: Record<string, string>;
+}
+
+interface SalesMetric {
+  title: string;
+  value: string;
+  change: string;
+  trend: 'up' | 'down' | 'neutral';
+  icon: React.ReactNode;
+  color: string;
+}
+
 const SalesScreen = () => {
   const { company } = useCompanyAuth();
   const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'promotions'>('products');
@@ -63,10 +94,14 @@ const SalesScreen = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
-  const [showAllCategories, setShowAllCategories] = useState(true);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [productView, setProductView] = useState<'grid' | 'list'>('list');
+  const [sortBy, setSortBy] = useState<'name' | 'price' | 'sales' | 'date'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [newProduct, setNewProduct] = useState<Partial<Product>>({
     name: '',
     description: '',
@@ -116,6 +151,7 @@ const SalesScreen = () => {
           }
         ],
         shareLink: 'https://quejapp.com/p/premium-wireless-headphones',
+        featured: true,
       },
       {
         id: '2',
@@ -168,6 +204,42 @@ const SalesScreen = () => {
         sales: 8,
         type: 'service',
         shareLink: 'https://quejapp.com/p/website-development-package',
+        featured: true,
+      },
+      {
+        id: '5',
+        name: 'Bluetooth Speaker',
+        description: 'Portable Bluetooth speaker with 20W output and 12-hour battery life. Water-resistant design.',
+        price: 89.99,
+        discountPrice: 69.99,
+        category: 'Electronics',
+        imageUrl: 'https://images.pexels.com/photos/1279107/pexels-photo-1279107.jpeg?auto=compress&cs=tinysrgb&w=300&h=300',
+        isActive: true,
+        inStock: true,
+        tags: ['bluetooth', 'audio', 'portable'],
+        createdAt: '2024-05-25T08:30:00Z',
+        updatedAt: '2024-05-25T08:30:00Z',
+        views: 732,
+        sales: 41,
+        type: 'product',
+        shareLink: 'https://quejapp.com/p/bluetooth-speaker',
+      },
+      {
+        id: '6',
+        name: 'Data Recovery Service',
+        description: 'Professional data recovery service for hard drives, SSDs, and memory cards. 95% success rate.',
+        price: 249.99,
+        category: 'Services',
+        imageUrl: 'https://images.pexels.com/photos/117729/pexels-photo-117729.jpeg?auto=compress&cs=tinysrgb&w=300&h=300',
+        isActive: true,
+        inStock: true,
+        tags: ['data recovery', 'technical', 'emergency'],
+        createdAt: '2024-05-18T13:45:00Z',
+        updatedAt: '2024-05-18T13:45:00Z',
+        views: 289,
+        sales: 15,
+        type: 'service',
+        shareLink: 'https://quejapp.com/p/data-recovery-service',
       },
     ];
     
@@ -180,9 +252,75 @@ const SalesScreen = () => {
       })
     );
     
+    // Mock orders
+    const mockOrders: Order[] = [
+      {
+        id: 'ORD-1001',
+        customerName: 'Sarah Johnson',
+        customerEmail: 'sarah.j@example.com',
+        items: [
+          {
+            id: 'ITEM-1',
+            productId: '1',
+            name: 'Premium Wireless Headphones',
+            price: 149.99,
+            quantity: 1,
+          }
+        ],
+        total: 149.99,
+        status: 'completed',
+        paymentStatus: 'paid',
+        createdAt: '2024-06-10T14:30:00Z',
+      },
+      {
+        id: 'ORD-1002',
+        customerName: 'Michael Chen',
+        customerEmail: 'michael.c@example.com',
+        items: [
+          {
+            id: 'ITEM-2',
+            productId: '3',
+            name: 'Smart Home Starter Kit',
+            price: 99.99,
+            quantity: 1,
+          },
+          {
+            id: 'ITEM-3',
+            productId: '5',
+            name: 'Bluetooth Speaker',
+            price: 69.99,
+            quantity: 2,
+          }
+        ],
+        total: 239.97,
+        status: 'processing',
+        paymentStatus: 'paid',
+        createdAt: '2024-06-12T09:15:00Z',
+      },
+      {
+        id: 'ORD-1003',
+        customerName: 'Emma Davis',
+        customerEmail: 'emma.d@example.com',
+        items: [
+          {
+            id: 'ITEM-4',
+            productId: '4',
+            name: 'Website Development Package',
+            price: 1499.99,
+            quantity: 1,
+          }
+        ],
+        total: 1499.99,
+        status: 'pending',
+        paymentStatus: 'unpaid',
+        createdAt: '2024-06-13T16:45:00Z',
+      },
+    ];
+    
     setProducts(mockProducts);
     setFilteredProducts(mockProducts);
     setCategories(productCategories);
+    setOrders(mockOrders);
     setIsLoading(false);
   };
 
@@ -203,8 +341,30 @@ const SalesScreen = () => {
       filtered = filtered.filter(product => product.category === selectedCategory);
     }
     
+    // Apply sorting
+    filtered = [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return sortOrder === 'asc' 
+            ? a.name.localeCompare(b.name)
+            : b.name.localeCompare(a.name);
+        case 'price':
+          const aPrice = a.discountPrice || a.price;
+          const bPrice = b.discountPrice || b.price;
+          return sortOrder === 'asc' ? aPrice - bPrice : bPrice - aPrice;
+        case 'sales':
+          return sortOrder === 'asc' ? a.sales - b.sales : b.sales - a.sales;
+        case 'date':
+          return sortOrder === 'asc' 
+            ? new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime()
+            : new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+        default:
+          return 0;
+      }
+    });
+    
     setFilteredProducts(filtered);
-  }, [searchQuery, selectedCategory, products]);
+  }, [searchQuery, selectedCategory, products, sortBy, sortOrder]);
 
   const handleAddProduct = () => {
     if (!newProduct.name || !newProduct.description || !newProduct.price) {
@@ -270,6 +430,19 @@ const SalesScreen = () => {
     Alert.alert('Success', `${product.type === 'product' ? 'Product' : 'Service'} added successfully!`);
   };
 
+  const handleEditProduct = () => {
+    if (!selectedProduct) return;
+    
+    // Update product in the products array
+    const updatedProducts = products.map(p => 
+      p.id === selectedProduct.id ? selectedProduct : p
+    );
+    
+    setProducts(updatedProducts);
+    setShowEditModal(false);
+    Alert.alert('Success', 'Item updated successfully!');
+  };
+
   const handleDeleteProduct = (productId: string) => {
     Alert.alert(
       'Delete Item',
@@ -306,6 +479,11 @@ const SalesScreen = () => {
     setShowShareModal(true);
   };
 
+  const handleEditProductModal = (product: Product) => {
+    setSelectedProduct({...product});
+    setShowEditModal(true);
+  };
+
   const handleAddTag = () => {
     if (newTag.trim() && !newProduct.tags?.includes(newTag.trim())) {
       setNewProduct({
@@ -323,6 +501,17 @@ const SalesScreen = () => {
     });
   };
 
+  const handleToggleSort = (sortType: 'name' | 'price' | 'sales' | 'date') => {
+    if (sortBy === sortType) {
+      // Toggle sort order if already sorting by this field
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new sort field and default to descending
+      setSortBy(sortType);
+      setSortOrder('desc');
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return `$${amount.toFixed(2)}`;
   };
@@ -333,8 +522,87 @@ const SalesScreen = () => {
     return Math.round(percentage);
   };
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  const getSalesMetrics = (): SalesMetric[] => {
+    return [
+      {
+        title: 'Total Sales',
+        value: '$2,845.94',
+        change: '+12.5%',
+        trend: 'up',
+        icon: <ShoppingBag size={24} color="#3498DB" />,
+        color: '#3498DB',
+      },
+      {
+        title: 'Total Orders',
+        value: '24',
+        change: '+8.3%',
+        trend: 'up',
+        icon: <Package size={24} color="#27AE60" />,
+        color: '#27AE60',
+      },
+      {
+        title: 'Conversion Rate',
+        value: '3.2%',
+        change: '-0.5%',
+        trend: 'down',
+        icon: <ArrowUpRight size={24} color="#E67E22" />,
+        color: '#E67E22',
+      },
+      {
+        title: 'Average Order',
+        value: '$118.58',
+        change: '+5.2%',
+        trend: 'up',
+        icon: <DollarSign size={24} color="#9B59B6" />,
+        color: '#9B59B6',
+      },
+    ];
+  };
+
   const renderProductsTab = () => (
     <View style={styles.tabContent}>
+      {/* Sales Metrics */}
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        style={styles.metricsContainer}
+        contentContainerStyle={styles.metricsContent}
+      >
+        {getSalesMetrics().map((metric, index) => (
+          <View key={index} style={styles.metricCard}>
+            <View style={styles.metricHeader}>
+              <View style={[styles.metricIcon, { backgroundColor: `${metric.color}20` }]}>
+                {metric.icon}
+              </View>
+              <View style={styles.metricTrend}>
+                {metric.trend === 'up' ? (
+                  <ArrowUp size={14} color="#27AE60" />
+                ) : metric.trend === 'down' ? (
+                  <ArrowDown size={14} color="#E74C3C" />
+                ) : null}
+                <Text style={[
+                  styles.metricTrendText,
+                  { color: metric.trend === 'up' ? '#27AE60' : metric.trend === 'down' ? '#E74C3C' : '#666666' }
+                ]}>
+                  {metric.change}
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.metricValue}>{metric.value}</Text>
+            <Text style={styles.metricTitle}>{metric.title}</Text>
+          </View>
+        ))}
+      </ScrollView>
+
       {/* Search and Filter */}
       <View style={styles.searchContainer}>
         <View style={styles.searchBar}>
@@ -353,6 +621,13 @@ const SalesScreen = () => {
           ) : null}
         </View>
         
+        <TouchableOpacity 
+          style={styles.viewToggleButton}
+          onPress={() => setProductView(productView === 'list' ? 'grid' : 'list')}
+        >
+          <Grid size={20} color="#FFFFFF" />
+        </TouchableOpacity>
+        
         <TouchableOpacity style={styles.filterButton}>
           <Filter size={20} color="#FFFFFF" />
         </TouchableOpacity>
@@ -368,15 +643,13 @@ const SalesScreen = () => {
         <TouchableOpacity
           style={[
             styles.categoryChip,
-            selectedCategory === null && styles.categoryChipActive,
-            { backgroundColor: selectedCategory === null ? '#5ce1e6' : '#2A2A2A' }
+            selectedCategory === null && styles.categoryChipActive
           ]}
           onPress={() => setSelectedCategory(null)}
         >
           <Text style={[
             styles.categoryChipText,
-            selectedCategory === null && styles.categoryChipTextActive,
-            { color: selectedCategory === null ? '#0A0A0A' : '#FFFFFF' }
+            selectedCategory === null && styles.categoryChipTextActive
           ]}>
             All
           </Text>
@@ -385,13 +658,12 @@ const SalesScreen = () => {
           </View>
         </TouchableOpacity>
         
-        {categories.slice(0, showAllCategories ? categories.length : 3).map((category) => (
+        {categories.map((category) => (
           <TouchableOpacity
             key={category.id}
             style={[
               styles.categoryChip,
-              selectedCategory === category.name && styles.categoryChipActive,
-              { backgroundColor: selectedCategory === category.name ? '#5ce1e6' : '#2A2A2A' }
+              selectedCategory === category.name && styles.categoryChipActive
             ]}
             onPress={() => setSelectedCategory(
               selectedCategory === category.name ? null : category.name
@@ -399,8 +671,7 @@ const SalesScreen = () => {
           >
             <Text style={[
               styles.categoryChipText,
-              selectedCategory === category.name && styles.categoryChipTextActive,
-              { color: selectedCategory === category.name ? '#0A0A0A' : '#FFFFFF' }
+              selectedCategory === category.name && styles.categoryChipTextActive
             ]}>
               {category.name}
             </Text>
@@ -409,135 +680,245 @@ const SalesScreen = () => {
             </View>
           </TouchableOpacity>
         ))}
-        
-        {categories.length > 3 && (
-          <TouchableOpacity
-            style={[
-              styles.categoryChip,
-              { backgroundColor: '#2A2A2A' }
-            ]}
-            onPress={() => setShowAllCategories(!showAllCategories)}
-          >
-            <Text style={[
-              styles.categoryChipText,
-              { color: '#5ce1e6' }
-            ]}>
-              {showAllCategories ? 'Show Less' : 'Show More'}
-            </Text>
-          </TouchableOpacity>
-        )}
       </ScrollView>
 
       {/* Products List */}
       <View style={styles.productsContainer}>
         <View style={styles.productsHeader}>
-          <Text style={styles.productsTitle}>
-            {selectedCategory ? selectedCategory : 'All Items'} 
-            <Text style={styles.productsCount}> ({filteredProducts.length})</Text>
-          </Text>
-          <TouchableOpacity 
-            style={styles.addButton}
-            onPress={() => setShowAddModal(true)}
-          >
-            <Plus size={16} color="#FFFFFF" />
-            <Text style={styles.addButtonText}>Add Item</Text>
-          </TouchableOpacity>
+          <View style={styles.productsHeaderLeft}>
+            <Text style={styles.productsTitle}>
+              {selectedCategory ? selectedCategory : 'All Items'} 
+              <Text style={styles.productsCount}> ({filteredProducts.length})</Text>
+            </Text>
+          </View>
+          
+          <View style={styles.productsHeaderRight}>
+            <View style={styles.sortDropdown}>
+              <Text style={styles.sortLabel}>Sort by:</Text>
+              <TouchableOpacity 
+                style={styles.sortButton}
+                onPress={() => handleToggleSort('date')}
+              >
+                <Text style={[styles.sortButtonText, sortBy === 'date' && styles.activeSortText]}>
+                  Date {sortBy === 'date' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.sortButton}
+                onPress={() => handleToggleSort('price')}
+              >
+                <Text style={[styles.sortButtonText, sortBy === 'price' && styles.activeSortText]}>
+                  Price {sortBy === 'price' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.sortButton}
+                onPress={() => handleToggleSort('sales')}
+              >
+                <Text style={[styles.sortButtonText, sortBy === 'sales' && styles.activeSortText]}>
+                  Sales {sortBy === 'sales' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.addButton}
+              onPress={() => setShowAddModal(true)}
+            >
+              <Plus size={16} color="#FFFFFF" />
+              <Text style={styles.addButtonText}>Add Item</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {filteredProducts.length > 0 ? (
-          <FlatList
-            data={filteredProducts}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <View style={styles.productCard}>
-                <View style={styles.productImageContainer}>
-                  <Image source={{ uri: item.imageUrl }} style={styles.productImage} />
-                  {item.discountPrice && (
-                    <View style={styles.discountBadge}>
-                      <Text style={styles.discountText}>
-                        {getDiscountPercentage(item.price, item.discountPrice)}% OFF
-                      </Text>
-                    </View>
-                  )}
-                  <View style={[
-                    styles.statusBadge,
-                    item.isActive ? styles.activeBadge : styles.inactiveBadge
-                  ]}>
-                    <Text style={styles.statusText}>
-                      {item.isActive ? 'Active' : 'Inactive'}
-                    </Text>
-                  </View>
-                  <View style={[
-                    styles.typeBadge,
-                    item.type === 'service' ? styles.serviceBadge : styles.productBadge
-                  ]}>
-                    <Text style={styles.typeText}>
-                      {item.type === 'service' ? 'Service' : 'Product'}
-                    </Text>
-                  </View>
-                </View>
-                
-                <View style={styles.productContent}>
-                  <Text style={styles.productName}>{item.name}</Text>
-                  <Text style={styles.productDescription} numberOfLines={2}>
-                    {item.description}
-                  </Text>
-                  
-                  <View style={styles.productPriceRow}>
-                    {item.discountPrice ? (
-                      <View style={styles.priceContainer}>
-                        <Text style={styles.originalPrice}>{formatCurrency(item.price)}</Text>
-                        <Text style={styles.discountPrice}>{formatCurrency(item.discountPrice)}</Text>
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#5ce1e6" />
+            <Text style={styles.loadingText}>Loading products...</Text>
+          </View>
+        ) : filteredProducts.length > 0 ? (
+          productView === 'list' ? (
+            <FlatList
+              data={filteredProducts}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <View style={styles.productCard}>
+                  <View style={styles.productImageContainer}>
+                    <Image source={{ uri: item.imageUrl }} style={styles.productImage} />
+                    {item.discountPrice && (
+                      <View style={styles.discountBadge}>
+                        <Text style={styles.discountText}>
+                          {getDiscountPercentage(item.price, item.discountPrice)}% OFF
+                        </Text>
                       </View>
-                    ) : (
-                      <Text style={styles.price}>{formatCurrency(item.price)}</Text>
                     )}
-                    
-                    <View style={styles.stockStatus}>
-                      <View style={[
-                        styles.stockIndicator,
-                        item.inStock ? styles.inStockIndicator : styles.outOfStockIndicator
-                      ]} />
-                      <Text style={styles.stockText}>
-                        {item.inStock ? 'In Stock' : 'Out of Stock'}
+                    {item.featured && (
+                      <View style={styles.featuredBadge}>
+                        <Text style={styles.featuredText}>Featured</Text>
+                      </View>
+                    )}
+                    <View style={[
+                      styles.statusBadge,
+                      item.isActive ? styles.activeBadge : styles.inactiveBadge
+                    ]}>
+                      <Text style={styles.statusText}>
+                        {item.isActive ? 'Active' : 'Inactive'}
+                      </Text>
+                    </View>
+                    <View style={[
+                      styles.typeBadge,
+                      item.type === 'service' ? styles.serviceBadge : styles.productBadge
+                    ]}>
+                      <Text style={styles.typeText}>
+                        {item.type === 'service' ? 'Service' : 'Product'}
                       </Text>
                     </View>
                   </View>
                   
-                  <View style={styles.productStats}>
-                    <View style={styles.statItem}>
-                      <Eye size={14} color="#666666" />
-                      <Text style={styles.statText}>{item.views}</Text>
+                  <View style={styles.productContent}>
+                    <Text style={styles.productName}>{item.name}</Text>
+                    <Text style={styles.productDescription} numberOfLines={2}>
+                      {item.description}
+                    </Text>
+                    
+                    <View style={styles.productPriceRow}>
+                      {item.discountPrice ? (
+                        <View style={styles.priceContainer}>
+                          <Text style={styles.originalPrice}>{formatCurrency(item.price)}</Text>
+                          <Text style={styles.discountPrice}>{formatCurrency(item.discountPrice)}</Text>
+                        </View>
+                      ) : (
+                        <Text style={styles.price}>{formatCurrency(item.price)}</Text>
+                      )}
+                      
+                      <View style={styles.stockStatus}>
+                        <View style={[
+                          styles.stockIndicator,
+                          item.inStock ? styles.inStockIndicator : styles.outOfStockIndicator
+                        ]} />
+                        <Text style={styles.stockText}>
+                          {item.inStock ? 'In Stock' : 'Out of Stock'}
+                        </Text>
+                      </View>
                     </View>
-                    <View style={styles.statItem}>
-                      <ShoppingBag size={14} color="#666666" />
-                      <Text style={styles.statText}>{item.sales}</Text>
+                    
+                    <View style={styles.productStats}>
+                      <View style={styles.statItem}>
+                        <Eye size={14} color="#666666" />
+                        <Text style={styles.statText}>{item.views}</Text>
+                      </View>
+                      <View style={styles.statItem}>
+                        <ShoppingBag size={14} color="#666666" />
+                        <Text style={styles.statText}>{item.sales}</Text>
+                      </View>
+                      <View style={styles.statItem}>
+                        <Clock size={14} color="#666666" />
+                        <Text style={styles.statText}>{formatDate(item.updatedAt)}</Text>
+                      </View>
                     </View>
-                  </View>
-                  
-                  <View style={styles.productActions}>
-                    <TouchableOpacity style={styles.actionButton}>
-                      <Pencil size={16} color="#5ce1e6" />
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={styles.actionButton}
-                      onPress={() => handleShareProduct(item)}
-                    >
-                      <Share2 size={16} color="#F39C12" />
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={[styles.actionButton, styles.deleteButton]}
-                      onPress={() => handleDeleteProduct(item.id)}
-                    >
-                      <Trash2 size={16} color="#E74C3C" />
-                    </TouchableOpacity>
+                    
+                    <View style={styles.productActions}>
+                      <TouchableOpacity 
+                        style={styles.actionButton}
+                        onPress={() => handleEditProductModal(item)}
+                      >
+                        <Pencil size={16} color="#5ce1e6" />
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={styles.actionButton}
+                        onPress={() => handleShareProduct(item)}
+                      >
+                        <Share2 size={16} color="#F39C12" />
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={[styles.actionButton, styles.deleteButton]}
+                        onPress={() => handleDeleteProduct(item.id)}
+                      >
+                        <Trash2 size={16} color="#E74C3C" />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </View>
-              </View>
-            )}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.productsList}
-          />
+              )}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.productsList}
+            />
+          ) : (
+            <FlatList
+              data={filteredProducts}
+              keyExtractor={(item) => item.id}
+              numColumns={2}
+              columnWrapperStyle={styles.gridRow}
+              renderItem={({ item }) => (
+                <View style={styles.gridCard}>
+                  <View style={styles.gridImageContainer}>
+                    <Image source={{ uri: item.imageUrl }} style={styles.gridImage} />
+                    {item.discountPrice && (
+                      <View style={styles.gridDiscountBadge}>
+                        <Text style={styles.gridDiscountText}>
+                          {getDiscountPercentage(item.price, item.discountPrice)}%
+                        </Text>
+                      </View>
+                    )}
+                    {!item.isActive && (
+                      <View style={styles.gridInactiveBadge}>
+                        <Text style={styles.gridInactiveText}>Inactive</Text>
+                      </View>
+                    )}
+                  </View>
+                  
+                  <View style={styles.gridContent}>
+                    <Text style={styles.gridName} numberOfLines={1}>{item.name}</Text>
+                    
+                    <View style={styles.gridPriceRow}>
+                      {item.discountPrice ? (
+                        <View style={styles.gridPriceContainer}>
+                          <Text style={styles.gridOriginalPrice}>{formatCurrency(item.price)}</Text>
+                          <Text style={styles.gridDiscountPrice}>{formatCurrency(item.discountPrice)}</Text>
+                        </View>
+                      ) : (
+                        <Text style={styles.gridPrice}>{formatCurrency(item.price)}</Text>
+                      )}
+                    </View>
+                    
+                    <View style={styles.gridFooter}>
+                      <View style={styles.gridType}>
+                        <Text style={[
+                          styles.gridTypeText,
+                          item.type === 'service' ? styles.gridServiceText : styles.gridProductText
+                        ]}>
+                          {item.type}
+                        </Text>
+                      </View>
+                      
+                      <View style={styles.gridActions}>
+                        <TouchableOpacity 
+                          style={styles.gridAction}
+                          onPress={() => handleEditProductModal(item)}
+                        >
+                          <Pencil size={14} color="#5ce1e6" />
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          style={styles.gridAction}
+                          onPress={() => handleShareProduct(item)}
+                        >
+                          <Share2 size={14} color="#F39C12" />
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          style={[styles.gridAction, styles.gridDeleteAction]}
+                          onPress={() => handleDeleteProduct(item.id)}
+                        >
+                          <Trash2 size={14} color="#E74C3C" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              )}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.gridList}
+            />
+          )
         ) : (
           <View style={styles.emptyState}>
             <ShoppingBag size={64} color="#3A3A3A" />
@@ -562,12 +943,130 @@ const SalesScreen = () => {
 
   const renderOrdersTab = () => (
     <View style={styles.tabContent}>
-      <View style={styles.comingSoonContainer}>
-        <ShoppingBag size={64} color="#3A3A3A" />
-        <Text style={styles.comingSoonTitle}>Orders Coming Soon</Text>
-        <Text style={styles.comingSoonMessage}>
-          Track and manage customer orders directly from this dashboard. This feature will be available in the next update.
-        </Text>
+      {/* Orders Metrics */}
+      <View style={styles.ordersMetricsContainer}>
+        <View style={styles.orderMetricCard}>
+          <View style={[styles.orderMetricIcon, { backgroundColor: '#27AE6020' }]}>
+            <CheckCircle size={24} color="#27AE60" />
+          </View>
+          <Text style={styles.orderMetricValue}>1</Text>
+          <Text style={styles.orderMetricTitle}>Completed</Text>
+        </View>
+        
+        <View style={styles.orderMetricCard}>
+          <View style={[styles.orderMetricIcon, { backgroundColor: '#3498DB20' }]}>
+            <Clock size={24} color="#3498DB" />
+          </View>
+          <Text style={styles.orderMetricValue}>1</Text>
+          <Text style={styles.orderMetricTitle}>Processing</Text>
+        </View>
+        
+        <View style={styles.orderMetricCard}>
+          <View style={[styles.orderMetricIcon, { backgroundColor: '#F39C1220' }]}>
+            <AlertTriangle size={24} color="#F39C12" />
+          </View>
+          <Text style={styles.orderMetricValue}>1</Text>
+          <Text style={styles.orderMetricTitle}>Pending</Text>
+        </View>
+      </View>
+
+      {/* Orders List */}
+      <View style={styles.ordersContainer}>
+        <View style={styles.ordersHeader}>
+          <Text style={styles.ordersTitle}>Recent Orders</Text>
+          <TouchableOpacity style={styles.viewAllButton}>
+            <Text style={styles.viewAllText}>View All</Text>
+            <ChevronRight size={16} color="#5ce1e6" />
+          </TouchableOpacity>
+        </View>
+
+        {orders.length > 0 ? (
+          <FlatList
+            data={orders}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <View style={styles.orderCard}>
+                <View style={styles.orderHeader}>
+                  <View style={styles.orderInfo}>
+                    <Text style={styles.orderId}>{item.id}</Text>
+                    <Text style={styles.orderDate}>{formatDate(item.createdAt)}</Text>
+                  </View>
+                  <View style={[
+                    styles.orderStatusBadge,
+                    item.status === 'completed' ? styles.completedBadge :
+                    item.status === 'processing' ? styles.processingBadge :
+                    item.status === 'pending' ? styles.pendingBadge :
+                    styles.cancelledBadge
+                  ]}>
+                    <Text style={styles.orderStatusText}>
+                      {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                    </Text>
+                  </View>
+                </View>
+                
+                <View style={styles.orderCustomer}>
+                  <Text style={styles.customerName}>{item.customerName}</Text>
+                  <Text style={styles.customerEmail}>{item.customerEmail}</Text>
+                </View>
+                
+                <View style={styles.orderItems}>
+                  {item.items.map((orderItem) => (
+                    <View key={orderItem.id} style={styles.orderItem}>
+                      <View style={styles.orderItemInfo}>
+                        <Text style={styles.orderItemName}>{orderItem.name}</Text>
+                        <Text style={styles.orderItemPrice}>
+                          {formatCurrency(orderItem.price)} × {orderItem.quantity}
+                        </Text>
+                      </View>
+                      <Text style={styles.orderItemTotal}>
+                        {formatCurrency(orderItem.price * orderItem.quantity)}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+                
+                <View style={styles.orderFooter}>
+                  <View style={styles.orderPayment}>
+                    <Text style={styles.paymentLabel}>Payment:</Text>
+                    <View style={[
+                      styles.paymentStatus,
+                      item.paymentStatus === 'paid' ? styles.paidStatus :
+                      item.paymentStatus === 'refunded' ? styles.refundedStatus :
+                      styles.unpaidStatus
+                    ]}>
+                      <Text style={styles.paymentStatusText}>
+                        {item.paymentStatus.charAt(0).toUpperCase() + item.paymentStatus.slice(1)}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={styles.orderTotal}>Total: {formatCurrency(item.total)}</Text>
+                </View>
+                
+                <View style={styles.orderActions}>
+                  <TouchableOpacity style={styles.orderActionButton}>
+                    <Eye size={16} color="#5ce1e6" />
+                    <Text style={styles.orderActionText}>View Details</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity style={styles.orderActionButton}>
+                    <MessageCircle size={16} color="#5ce1e6" />
+                    <Text style={styles.orderActionText}>Contact Customer</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.ordersList}
+          />
+        ) : (
+          <View style={styles.emptyState}>
+            <ShoppingBag size={64} color="#3A3A3A" />
+            <Text style={styles.emptyTitle}>No orders yet</Text>
+            <Text style={styles.emptyMessage}>
+              Orders will appear here when customers make purchases
+            </Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -874,6 +1373,179 @@ const SalesScreen = () => {
         </SafeAreaView>
       </Modal>
 
+      {/* Edit Product Modal */}
+      <Modal
+        visible={showEditModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowEditModal(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowEditModal(false)}>
+              <X size={24} color="#666666" />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>
+              Edit {selectedProduct?.type === 'service' ? 'Service' : 'Product'}
+            </Text>
+            <TouchableOpacity onPress={handleEditProduct}>
+              <Save size={24} color="#5ce1e6" />
+            </TouchableOpacity>
+          </View>
+
+          {selectedProduct && (
+            <ScrollView style={styles.modalContent}>
+              {/* Basic Information */}
+              <View style={styles.formSection}>
+                <Text style={styles.formSectionTitle}>Basic Information</Text>
+                
+                <View style={styles.formGroup}>
+                  <Text style={styles.label}>Name</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={selectedProduct.name}
+                    onChangeText={(text) => setSelectedProduct({...selectedProduct, name: text})}
+                    placeholder={`Enter ${selectedProduct.type} name`}
+                    placeholderTextColor="#666666"
+                  />
+                </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.label}>Description</Text>
+                  <TextInput
+                    style={styles.textArea}
+                    value={selectedProduct.description}
+                    onChangeText={(text) => setSelectedProduct({...selectedProduct, description: text})}
+                    placeholder={`Describe your ${selectedProduct.type}`}
+                    placeholderTextColor="#666666"
+                    multiline
+                    numberOfLines={4}
+                  />
+                </View>
+
+                <View style={styles.formRow}>
+                  <View style={styles.formGroup}>
+                    <Text style={styles.label}>Price</Text>
+                    <View style={styles.priceInputContainer}>
+                      <DollarSign size={16} color="#666666" />
+                      <TextInput
+                        style={styles.priceInput}
+                        value={selectedProduct.price.toString()}
+                        onChangeText={(text) => {
+                          const price = parseFloat(text) || 0;
+                          setSelectedProduct({...selectedProduct, price});
+                        }}
+                        placeholder="0.00"
+                        placeholderTextColor="#666666"
+                        keyboardType="numeric"
+                      />
+                    </View>
+                  </View>
+                  
+                  <View style={styles.formGroup}>
+                    <Text style={styles.label}>Discount Price (Optional)</Text>
+                    <View style={styles.priceInputContainer}>
+                      <DollarSign size={16} color="#666666" />
+                      <TextInput
+                        style={styles.priceInput}
+                        value={selectedProduct.discountPrice?.toString() || ''}
+                        onChangeText={(text) => {
+                          const discountPrice = parseFloat(text) || undefined;
+                          setSelectedProduct({...selectedProduct, discountPrice});
+                        }}
+                        placeholder="0.00"
+                        placeholderTextColor="#666666"
+                        keyboardType="numeric"
+                      />
+                    </View>
+                  </View>
+                </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.label}>Category</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={selectedProduct.category}
+                    onChangeText={(text) => setSelectedProduct({...selectedProduct, category: text})}
+                    placeholder="e.g., Electronics, Services, Clothing"
+                    placeholderTextColor="#666666"
+                  />
+                </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.label}>Image URL</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={selectedProduct.imageUrl}
+                    onChangeText={(text) => setSelectedProduct({...selectedProduct, imageUrl: text})}
+                    placeholder="https://example.com/image.jpg"
+                    placeholderTextColor="#666666"
+                  />
+                </View>
+              </View>
+
+              {/* Status */}
+              <View style={styles.formSection}>
+                <Text style={styles.formSectionTitle}>Status</Text>
+                
+                <View style={styles.switchContainer}>
+                  <View style={styles.switchInfo}>
+                    <Text style={styles.switchLabel}>Active</Text>
+                    <Text style={styles.switchDescription}>
+                      {selectedProduct.isActive 
+                        ? `This ${selectedProduct.type} will be visible to customers` 
+                        : `This ${selectedProduct.type} will be hidden from customers`}
+                    </Text>
+                  </View>
+                  <Switch
+                    value={selectedProduct.isActive}
+                    onValueChange={(value) => setSelectedProduct({...selectedProduct, isActive: value})}
+                    trackColor={{ false: '#2A2A2A', true: '#5ce1e6' }}
+                    thumbColor="#FFFFFF"
+                  />
+                </View>
+                
+                <View style={styles.switchContainer}>
+                  <View style={styles.switchInfo}>
+                    <Text style={styles.switchLabel}>
+                      {selectedProduct.type === 'product' ? 'In Stock' : 'Available'}
+                    </Text>
+                    <Text style={styles.switchDescription}>
+                      {selectedProduct.inStock 
+                        ? `This ${selectedProduct.type} is available for purchase` 
+                        : `This ${selectedProduct.type} is out of stock/unavailable`}
+                    </Text>
+                  </View>
+                  <Switch
+                    value={selectedProduct.inStock}
+                    onValueChange={(value) => setSelectedProduct({...selectedProduct, inStock: value})}
+                    trackColor={{ false: '#2A2A2A', true: '#5ce1e6' }}
+                    thumbColor="#FFFFFF"
+                  />
+                </View>
+                
+                <View style={styles.switchContainer}>
+                  <View style={styles.switchInfo}>
+                    <Text style={styles.switchLabel}>Featured</Text>
+                    <Text style={styles.switchDescription}>
+                      {selectedProduct.featured 
+                        ? `This ${selectedProduct.type} will be highlighted in listings` 
+                        : `This ${selectedProduct.type} will be displayed normally`}
+                    </Text>
+                  </View>
+                  <Switch
+                    value={selectedProduct.featured || false}
+                    onValueChange={(value) => setSelectedProduct({...selectedProduct, featured: value})}
+                    trackColor={{ false: '#2A2A2A', true: '#5ce1e6' }}
+                    thumbColor="#FFFFFF"
+                  />
+                </View>
+              </View>
+            </ScrollView>
+          )}
+        </SafeAreaView>
+      </Modal>
+
       {/* Share Modal */}
       <Modal
         visible={showShareModal}
@@ -1028,10 +1700,58 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
   },
+  metricsContainer: {
+    marginBottom: 16,
+  },
+  metricsContent: {
+    paddingRight: 16,
+    gap: 12,
+  },
+  metricCard: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 12,
+    padding: 16,
+    width: 160,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  metricHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  metricIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  metricTrend: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  metricTrendText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  metricValue: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  metricTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#CCCCCC',
+  },
   searchContainer: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   searchBar: {
     flex: 1,
@@ -1050,6 +1770,16 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginLeft: 12,
   },
+  viewToggleButton: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: 12,
+    width: 46,
+    height: 46,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#3A3A3A',
+  },
   filterButton: {
     backgroundColor: '#5ce1e6',
     borderRadius: 12,
@@ -1059,16 +1789,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   categoriesContainer: {
-    marginBottom: 12,
+    marginBottom: 16,
     borderRadius: 12,
-    paddingVertical: 10,
+    paddingVertical: 12,
     backgroundColor: '#1A1A1A',
     borderWidth: 1,
     borderColor: '#2A2A2A',
   },
   categoriesContent: {
-    paddingHorizontal: 12,
-    gap: 8,
+    paddingHorizontal: 16,
+    gap: 12,
   },
   categoryChip: {
     flexDirection: 'row',
@@ -1076,22 +1806,24 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     paddingHorizontal: 16,
     paddingVertical: 10,
+    backgroundColor: '#2A2A2A',
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: '#3A3A3A',
     gap: 8,
   },
   categoryChipActive: {
+    backgroundColor: '#5ce1e6',
     borderColor: '#5ce1e6',
     borderWidth: 2,
   },
   categoryChipText: {
     fontSize: 14,
     fontWeight: '600',
-     color: '#FFFFFF',
+    color: '#FFFFFF',
   },
   categoryChipTextActive: {
     fontWeight: '700',
-     color: '#0A0A0A',
+    color: '#0A0A0A',
   },
   categoryCount: {
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
@@ -1112,6 +1844,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  productsHeaderLeft: {
+    flex: 1,
   },
   productsTitle: {
     fontSize: 18,
@@ -1121,6 +1858,40 @@ const styles = StyleSheet.create({
   productsCount: {
     color: '#666666',
     fontWeight: '400',
+  },
+  productsHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  sortDropdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1A1A1A',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    gap: 4,
+  },
+  sortLabel: {
+    fontSize: 12,
+    color: '#666666',
+    marginRight: 4,
+  },
+  sortButton: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  sortButtonText: {
+    fontSize: 12,
+    color: '#CCCCCC',
+  },
+  activeSortText: {
+    color: '#5ce1e6',
+    fontWeight: '600',
   },
   addButton: {
     flexDirection: 'row',
@@ -1165,6 +1936,21 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   discountText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  featuredBadge: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    backgroundColor: '#F39C12',
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    zIndex: 1,
+  },
+  featuredText: {
     fontSize: 12,
     fontWeight: '700',
     color: '#FFFFFF',
@@ -1293,6 +2079,135 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     backgroundColor: '#2A1A1A',
+  },
+  // Grid view styles
+  gridRow: {
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  gridList: {
+    paddingBottom: 20,
+  },
+  gridCard: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    width: (width - 56) / 2,
+  },
+  gridImageContainer: {
+    position: 'relative',
+    height: 120,
+  },
+  gridImage: {
+    width: '100%',
+    height: '100%',
+  },
+  gridDiscountBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: '#E74C3C',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  gridDiscountText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  gridInactiveBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  gridInactiveText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#CCCCCC',
+  },
+  gridContent: {
+    padding: 12,
+  },
+  gridName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 6,
+  },
+  gridPriceRow: {
+    marginBottom: 8,
+  },
+  gridPriceContainer: {
+    flexDirection: 'column',
+  },
+  gridPrice: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#5ce1e6',
+  },
+  gridOriginalPrice: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: '#666666',
+    textDecorationLine: 'line-through',
+  },
+  gridDiscountPrice: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#5ce1e6',
+  },
+  gridFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  gridType: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  gridTypeText: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  gridProductText: {
+    color: '#3498DB',
+  },
+  gridServiceText: {
+    color: '#9B59B6',
+  },
+  gridActions: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  gridAction: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: 4,
+    padding: 4,
+  },
+  gridDeleteAction: {
+    backgroundColor: '#2A1A1A',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#CCCCCC',
+    marginTop: 12,
   },
   emptyState: {
     flex: 1,
@@ -1657,6 +2572,222 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  // Orders tab styles
+  ordersMetricsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  orderMetricCard: {
+    flex: 1,
+    backgroundColor: '#1A1A1A',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    marginHorizontal: 4,
+  },
+  orderMetricIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  orderMetricValue: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  orderMetricTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#CCCCCC',
+  },
+  ordersContainer: {
+    flex: 1,
+  },
+  ordersHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  ordersTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  viewAllText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#5ce1e6',
+  },
+  ordersList: {
+    paddingBottom: 20,
+  },
+  orderCard: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  orderHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  orderInfo: {
+    flex: 1,
+  },
+  orderId: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  orderDate: {
+    fontSize: 14,
+    color: '#666666',
+  },
+  orderStatusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  completedBadge: {
+    backgroundColor: '#27AE60',
+  },
+  processingBadge: {
+    backgroundColor: '#3498DB',
+  },
+  pendingBadge: {
+    backgroundColor: '#F39C12',
+  },
+  cancelledBadge: {
+    backgroundColor: '#E74C3C',
+  },
+  orderStatusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  orderCustomer: {
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2A2A2A',
+  },
+  customerName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  customerEmail: {
+    fontSize: 14,
+    color: '#CCCCCC',
+  },
+  orderItems: {
+    marginBottom: 12,
+  },
+  orderItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2A2A2A',
+  },
+  orderItemInfo: {
+    flex: 1,
+  },
+  orderItemName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  orderItemPrice: {
+    fontSize: 12,
+    color: '#CCCCCC',
+  },
+  orderItemTotal: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#5ce1e6',
+  },
+  orderFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  orderPayment: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  paymentLabel: {
+    fontSize: 14,
+    color: '#CCCCCC',
+  },
+  paymentStatus: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  paidStatus: {
+    backgroundColor: '#27AE60',
+  },
+  unpaidStatus: {
+    backgroundColor: '#F39C12',
+  },
+  refundedStatus: {
+    backgroundColor: '#E74C3C',
+  },
+  paymentStatusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  orderTotal: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  orderActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  orderActionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2A2A2A',
+    borderRadius: 8,
+    paddingVertical: 10,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#3A3A3A',
+  },
+  orderActionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#5ce1e6',
   },
   comingSoonContainer: {
     flex: 1,
