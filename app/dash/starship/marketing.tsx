@@ -793,12 +793,6 @@ const MarketingContent = () => {
                       </View>
                     )}
                   </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.bannerActionButton, styles.deleteActionButton]}
-                    onPress={() => handleDeleteBanner(banner.id)}
-                  >
-                    <X size={14} color="#E74C3C" />
-                  </TouchableOpacity>
                 ))}
               </View>
             </View>
