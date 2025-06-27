@@ -684,6 +684,18 @@ const SalesScreen = () => {
 
       {/* Products List */}
       <View style={styles.productsContainer}>
+            ]}>
+              {category.name}
+            </Text>
+            <View style={styles.categoryCount}>
+              <Text style={styles.categoryCountText}>{category.count}</Text>
+            </View>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      {/* Products List */}
+      <View style={styles.productsContainer}>
         <View style={styles.productsHeader}>
           <View style={styles.productsHeaderLeft}>
             <Text style={styles.productsTitle}>
