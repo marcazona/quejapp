@@ -101,9 +101,6 @@ const ConversationCard = ({ conversation }: { conversation: ChatConversation }) 
               {conversation.status === 'pending' ? 'connecting...' : 'active'}
             </Text>
           </View>
-          <Text style={styles.messageTime}>
-            {lastMessage ? getTimeAgo(lastMessage.created_at) : getTimeAgo(conversation.created_at)}
-          </Text>
         </View>
       </View>
 
@@ -474,11 +471,6 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   statusText: {
-    fontSize: 12,
-    color: '#666666',
-    fontWeight: '500',
-  },
-  messageTime: {
     fontSize: 12,
     color: '#666666',
     fontWeight: '500',
