@@ -930,26 +930,6 @@ export default function ChatsScreen() {
                       <Gift size={16} color="#FFFFFF" />
                       <Text style={styles.actionButtonText}>Award</Text>
                     </TouchableOpacity>
-                    
-                    <View style={styles.separator} />
-                    
-                    <Text style={styles.complianceTitle}>Compliance</Text>
-                    <TouchableOpacity 
-                      style={styles.complianceButton}
-                      onPress={handleComplianceClick}
-                    >
-                      <FileText size={16} color="#FFFFFF" />
-                      <Text style={styles.actionButtonText}>View History</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.complianceButton}
-                      onPress={() => setShowComplianceModal(true)}
-                    >
-                      <FileText size={16} color="#FFFFFF" />
-                      <Text style={styles.complianceButtonText}>Compliance</Text>
-                    </TouchableOpacity>
-                  </View>
                 </View>
               </View>
             </View>
@@ -1812,49 +1792,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 8,
-    gap: 8,
-  },
-  actionButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  separator: {
-    height: 1,
-    backgroundColor: '#3A3A3A',
-    marginVertical: 16,
-  },
-  complianceTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    marginBottom: 12,
-  },
-  complianceButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#8E44AD',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 8,
-  },
-  complianceButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#8E44AD',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 8,
-  },
-  complianceButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
   noChatSelected: {
     flex: 1,
     justifyContent: 'center',
