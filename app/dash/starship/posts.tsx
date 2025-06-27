@@ -14,7 +14,6 @@ import {
   Modal,
   ScrollView,
   Image,
-  FlatList,
 } from 'react-native';
 import { router } from 'expo-router';
 import { ArrowLeft, MoveVertical as MoreVertical, Send, Star, User, Globe, Eye, Smile, Frown, Meh, X, Plus, Search, Filter, Calendar, Tag, MessageCircle, TriangleAlert as AlertTriangle, Clock, Shield, ThumbsUp, ThumbsDown, Gift, FileText, UserCheck, Save } from 'lucide-react-native';
