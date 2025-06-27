@@ -93,15 +93,6 @@ const ConversationCard = ({ conversation }: { conversation: ChatConversation }) 
             </Text>
           )}
         </View>
-        
-        <View style={styles.conversationMeta}>
-          <View style={styles.statusRow}>
-            <View style={styles.statusIndicator} />
-            <Text style={styles.statusText}>
-              {conversation.status === 'pending' ? 'connecting...' : 'active'}
-            </Text>
-          </View>
-        </View>
       </View>
 
       {/* Unread Count */}
@@ -363,26 +354,6 @@ const styles = StyleSheet.create({
     borderColor: '#8E44AD',
     borderWidth: 2,
     backgroundColor: '#1A1A2A',
-  },
-  avatarContainer: {
-    position: 'relative',
-    marginRight: 16,
-  },
-  userAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 2,
-    borderColor: '#2A2A2A',
-  },
-  userAvatarPlaceholder: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#2A2A2A',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   onlineIndicator: {
     position: 'absolute',
     bottom: 2,
