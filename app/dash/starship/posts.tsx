@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   TextInput,
 } from 'react-native';
-import { Search, Plus, MoreVertical, Heart, MessageCircle, Share } from 'lucide-react-native';
+import { Search, Plus, MoveVertical as MoreVertical, Heart, MessageCircle, Share } from 'lucide-react-native';
 
 interface Post {
   id: string;
