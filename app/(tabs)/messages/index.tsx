@@ -354,6 +354,7 @@ const styles = StyleSheet.create({
     borderColor: '#8E44AD',
     borderWidth: 2,
     backgroundColor: '#1A1A2A',
+  },
   onlineIndicator: {
     position: 'absolute',
     bottom: 2,
@@ -492,4 +493,21 @@ const styles = StyleSheet.create({
     marginTop: 16,
     textAlign: 'center',
   },
+  avatarContainer: {
+    position: 'relative',
+    marginRight: 12,
+  },
+  userAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
+  userAvatarPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#2A2A2A',
+    justifyContent: 'center',
+    alignItems: 'center',
+  }
 });
