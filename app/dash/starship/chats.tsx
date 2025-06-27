@@ -631,12 +631,6 @@ export default function ChatsScreen() {
                         {selectedConversation.customer.loyaltyPoints}
                       </Text>
                     </View>
-                    <View style={styles.statItem}>
-                      <Text style={styles.statLabel}>Last Active</Text>
-                      <Text style={styles.statValue}>
-                        {selectedConversation.customer.lastActive}
-                      </Text>
-                    </View>
                   </View>
 
                   <View style={styles.customerActions}>
