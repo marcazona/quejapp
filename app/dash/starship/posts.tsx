@@ -14,9 +14,10 @@ import {
   Modal,
   ScrollView,
   Image,
+  FlatList,
 } from 'react-native';
 import { router } from 'expo-router';
-import { ArrowLeft, MoveVertical as MoreVertical, Send, Star, User, Globe, Eye, Smile, Frown, Meh, X, Plus, Search, Filter, Calendar, Tag, MessageCircle, TriangleAlert as AlertTriangle, Clock, Shield, ThumbsUp, ThumbsDown, Gift } from 'lucide-react-native';
+import { ArrowLeft, MoveVertical as MoreVertical, Send, Star, User, Globe, Eye, Smile, Frown, Meh, X, Plus, Search, Filter, Calendar, Tag, MessageCircle, TriangleAlert as AlertTriangle, Clock, Shield, ThumbsUp, ThumbsDown, Gift, FileText, UserCheck, Save } from 'lucide-react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MIN_SIDEBAR_WIDTH = 280;
@@ -39,6 +40,22 @@ interface Customer {
   joinDate: string;
   totalPosts: number;
   verified: boolean;
+  complianceHistory?: ComplianceEntry[];
+}
+
+interface ComplianceEntry {
+  id: string;
+  type: 'note' | 'status_change' | 'contact' | 'escalation';
+  title: string;
+  description: string;
+  author: string;
+  timestamp: string;
+  metadata?: {
+    oldStatus?: string;
+    newStatus?: string;
+    contactMethod?: string;
+    priority?: string;
+  };
 }
 
 interface PostReply {
@@ -86,6 +103,9 @@ export default function PostsScreen() {
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'new' | 'in_progress' | 'resolved' | 'closed'>('all');
   const [showPointsModal, setShowPointsModal] = useState(false);
   const [customPointsAmount, setCustomPointsAmount] = useState('');
+  const [showComplianceModal, setShowComplianceModal] = useState(false);
+  const [newNote, setNewNote] = useState('');
+  const [complianceHistory, setComplianceHistory] = useState<ComplianceEntry[]>([]);
 
   // Initialize with mock data for testing
   useEffect(() => {
@@ -108,6 +128,31 @@ export default function PostsScreen() {
           joinDate: '2023-01-15',
           totalPosts: 8,
           verified: true,
+          complianceHistory: [
+            {
+              id: '1',
+              type: 'contact',
+              title: 'Post Submitted',
+              description: 'Customer submitted a positive review post',
+              author: 'System',
+              timestamp: '2024-01-15T10:30:00Z',
+              metadata: {
+                contactMethod: 'Web Form'
+              }
+            },
+            {
+              id: '2',
+              type: 'status_change',
+              title: 'Status Updated',
+              description: 'Post status changed from new to resolved',
+              author: 'John Smith',
+              timestamp: '2024-01-15T12:30:00Z',
+              metadata: {
+                oldStatus: 'new',
+                newStatus: 'resolved'
+              }
+            }
+          ]
         },
         type: 'review',
         title: 'Excellent customer service experience!',
@@ -150,6 +195,27 @@ export default function PostsScreen() {
           joinDate: '2023-03-22',
           totalPosts: 3,
           verified: false,
+          complianceHistory: [
+            {
+              id: '3',
+              type: 'contact',
+              title: 'Claim Submitted',
+              description: 'Customer submitted a product damage claim',
+              author: 'System',
+              timestamp: '2024-01-14T09:45:00Z',
+              metadata: {
+                contactMethod: 'Web Form'
+              }
+            },
+            {
+              id: '4',
+              type: 'note',
+              title: 'Follow-up Required',
+              description: 'Customer requires replacement product within 2-3 business days',
+              author: 'Sarah Johnson',
+              timestamp: '2024-01-14T14:45:00Z'
+            }
+          ]
         },
         type: 'claim',
         title: 'Product arrived damaged',
@@ -191,6 +257,7 @@ export default function PostsScreen() {
           joinDate: '2022-11-08',
           totalPosts: 15,
           verified: true,
+          complianceHistory: []
         },
         type: 'question',
         title: 'How to upgrade to premium plan?',
@@ -296,6 +363,46 @@ export default function PostsScreen() {
     setShowPointsModal(false);
   };
 
+  const handleAddNote = () => {
+    if (!newNote.trim() || !selectedPost) return;
+
+    const note: ComplianceEntry = {
+      id: Date.now().toString(),
+      type: 'note',
+      title: 'Customer Note',
+      description: newNote.trim(),
+      author: 'Current User',
+      timestamp: new Date().toISOString()
+    };
+
+    const updatedHistory = [note, ...complianceHistory];
+    setComplianceHistory(updatedHistory);
+
+    // Update the post with new compliance history
+    const updatedPost = {
+      ...selectedPost,
+      customer: {
+        ...selectedPost.customer,
+        complianceHistory: updatedHistory
+      }
+    };
+
+    setSelectedPost(updatedPost);
+    setPosts(prev =>
+      prev.map(post => post.id === selectedPost.id ? updatedPost : post)
+    );
+
+    setNewNote('');
+    Alert.alert('Success', 'Note added successfully');
+  };
+
+  // Update compliance history when post changes
+  useEffect(() => {
+    if (selectedPost) {
+      setComplianceHistory(selectedPost.customer.complianceHistory || []);
+    }
+  }, [selectedPost]);
+
   const getMoodIcon = (mood: string) => {
     switch (mood) {
       case 'happy': return <Smile size={16} color="#27AE60" />;
@@ -312,6 +419,21 @@ export default function PostsScreen() {
       case 'neutral': return '#F39C12';
       default: return '#666666';
     }
+  };
+
+  const getComplianceIcon = (type: string) => {
+    switch (type) {
+      case 'note': return <MessageSquare size={16} color="#3498DB" />;
+      case 'status_change': return <UserCheck size={16} color="#E67E22" />;
+      case 'contact': return <User size={16} color="#27AE60" />;
+      case 'escalation': return <AlertTriangle size={16} color="#E74C3C" />;
+      default: return <FileText size={16} color="#666666" />;
+    }
+  };
+
+  const formatComplianceTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    return date.toLocaleString();
   };
 
   const panResponder = useRef(
@@ -769,6 +891,14 @@ export default function PostsScreen() {
                       <Gift size={16} color="#FFFFFF" />
                       <Text style={styles.actionButtonText}>Award</Text>
                     </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.complianceButton}
+                      onPress={() => setShowComplianceModal(true)}
+                    >
+                      <FileText size={16} color="#FFFFFF" />
+                      <Text style={styles.complianceButtonText}>Compliance</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
               </View>
@@ -841,6 +971,116 @@ export default function PostsScreen() {
                 <Gift size={16} color="#FFFFFF" />
                 <Text style={styles.pointsModalConfirmText}>Award Points</Text>
               </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Compliance Modal */}
+      <Modal
+        visible={showComplianceModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowComplianceModal(false)}
+      >
+        <View style={styles.complianceModalOverlay}>
+          <View style={styles.complianceModal}>
+            <View style={styles.complianceModalHeader}>
+              <Text style={styles.complianceModalTitle}>
+                Compliance History - {selectedPost?.customer.name}
+              </Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowComplianceModal(false)}
+              >
+                <X size={20} color="#666666" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.complianceContent}>
+              {/* Add Note Section */}
+              <View style={styles.addNoteSection}>
+                <Text style={styles.addNoteTitle}>Add New Note</Text>
+                <View style={styles.noteInputContainer}>
+                  <TextInput
+                    style={styles.noteInput}
+                    value={newNote}
+                    onChangeText={setNewNote}
+                    placeholder="Enter compliance note..."
+                    placeholderTextColor="#666666"
+                    multiline
+                    numberOfLines={3}
+                    maxLength={500}
+                  />
+                  <TouchableOpacity
+                    style={[styles.addNoteButton, !newNote.trim() && styles.addNoteButtonDisabled]}
+                    onPress={handleAddNote}
+                    disabled={!newNote.trim()}
+                  >
+                    <Save size={16} color="#FFFFFF" />
+                    <Text style={styles.addNoteButtonText}>Add Note</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* History List */}
+              <View style={styles.historySection}>
+                <Text style={styles.historySectionTitle}>
+                  Interaction History ({complianceHistory.length})
+                </Text>
+                
+                {complianceHistory.length > 0 ? (
+                  <FlatList
+                    data={complianceHistory}
+                    keyExtractor={(item) => item.id}
+                    showsVerticalScrollIndicator={false}
+                    style={styles.historyList}
+                    renderItem={({ item }) => (
+                      <View style={styles.historyItem}>
+                        <View style={styles.historyItemHeader}>
+                          <View style={styles.historyItemLeft}>
+                            {getComplianceIcon(item.type)}
+                            <Text style={styles.historyItemTitle}>{item.title}</Text>
+                          </View>
+                          <Text style={styles.historyItemTime}>
+                            {formatComplianceTime(item.timestamp)}
+                          </Text>
+                        </View>
+                        
+                        <Text style={styles.historyItemDescription}>
+                          {item.description}
+                        </Text>
+                        
+                        <View style={styles.historyItemFooter}>
+                          <Text style={styles.historyItemAuthor}>by {item.author}</Text>
+                          {item.metadata && (
+                            <View style={styles.historyItemMetadata}>
+                              {item.metadata.oldStatus && item.metadata.newStatus && (
+                                <Text style={styles.metadataText}>
+                                  {item.metadata.oldStatus} → {item.metadata.newStatus}
+                                </Text>
+                              )}
+                              {item.metadata.contactMethod && (
+                                <Text style={styles.metadataText}>
+                                  via {item.metadata.contactMethod}
+                                </Text>
+                              )}
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    )}
+                  />
+                ) : (
+                  <View style={styles.emptyHistory}>
+                    <FileText size={48} color="#666666" />
+                    <Text style={styles.emptyHistoryTitle}>No History Yet</Text>
+                    <Text style={styles.emptyHistoryText}>
+                      Compliance notes and interaction history will appear here
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
           </View>
         </View>
@@ -1506,6 +1746,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  complianceButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#8E44AD',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  complianceButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   noPostSelected: {
     flex: 1,
     justifyContent: 'center',
@@ -1523,5 +1778,171 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666666',
     textAlign: 'center',
+  },
+  // Compliance Modal Styles
+  complianceModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  complianceModal: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 16,
+    width: '100%',
+    maxWidth: 600,
+    maxHeight: '80%',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  complianceModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2A2A2A',
+  },
+  complianceModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    flex: 1,
+  },
+  complianceContent: {
+    flex: 1,
+    padding: 24,
+  },
+  addNoteSection: {
+    marginBottom: 24,
+  },
+  addNoteTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 12,
+  },
+  noteInputContainer: {
+    gap: 12,
+  },
+  noteInput: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#3A3A3A',
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  addNoteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#8E44AD',
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  addNoteButtonDisabled: {
+    backgroundColor: '#3A3A3A',
+    opacity: 0.5,
+  },
+  addNoteButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  historySection: {
+    flex: 1,
+  },
+  historySectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 16,
+  },
+  historyList: {
+    flex: 1,
+  },
+  historyItem: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#3A3A3A',
+  },
+  historyItemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  historyItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  historyItemTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  historyItemTime: {
+    fontSize: 12,
+    color: '#666666',
+  },
+  historyItemDescription: {
+    fontSize: 14,
+    color: '#CCCCCC',
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  historyItemFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  historyItemAuthor: {
+    fontSize: 12,
+    color: '#5ce1e6',
+    fontWeight: '500',
+  },
+  historyItemMetadata: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  metadataText: {
+    fontSize: 11,
+    color: '#999999',
+    backgroundColor: '#3A3A3A',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  emptyHistory: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyHistoryTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyHistoryText: {
+    fontSize: 14,
+    color: '#666666',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });
