@@ -650,6 +650,10 @@ const SalesScreen = () => {
           <Text style={[
             styles.categoryChipText,
             selectedCategory === null && styles.categoryChipTextActive
+        <View style={styles.modalHeader}>
+          <TouchableOpacity onPress={() => setShowAddModal(false)}>
+            <X size={24} color="#666666" />
+          </TouchableOpacity>
           ]}>
             All
           </Text>
