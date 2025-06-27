@@ -17,7 +17,7 @@ import {
   Image,
 } from 'react-native';
 import { router } from 'expo-router';
-import { ArrowLeft, MoveVertical as MoreVertical, Send, Star, User, Globe, Eye, Smile, Frown, Meh, X, Plus, Search, Filter, Calendar, Tag, MessageCircle, TriangleAlert as AlertTriangle, Clock, Shield, ThumbsUp, ThumbsDown, Gift } from 'lucide-react-native';
+import { ArrowLeft, MoveVertical as MoreVertical, Send, Star, User, Globe, Eye, Smile, Frown, Meh, X, Plus, Search, Filter, Calendar, Tag, MessageCircle, TriangleAlert as AlertTriangle, Clock, Shield, ThumbsUp, ThumbsDown } from 'lucide-react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MIN_SIDEBAR_WIDTH = 280;
@@ -85,8 +85,6 @@ export default function PostsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'review' | 'claim' | 'question' | 'complaint'>('all');
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'new' | 'in_progress' | 'resolved' | 'closed'>('all');
-  const [showPointsModal, setShowPointsModal] = useState(false);
-  const [customPointsAmount, setCustomPointsAmount] = useState('');
 
   // Initialize with mock data for testing
   useEffect(() => {
@@ -240,46 +238,6 @@ export default function PostsScreen() {
       prev.map(post => post.id === selectedPost.id ? updatedPost : post)
     );
     setNewReply('');
-  };
-
-  const handleAwardCoins = (customerId: string, amount: number) => {
-    if (!selectedPost) return;
-
-    const updatedCustomer = {
-      ...selectedPost.customer,
-      loyaltyPoints: selectedPost.customer.loyaltyPoints + amount
-    };
-
-    const updatedPost = {
-      ...selectedPost,
-      customer: updatedCustomer
-    };
-    
-    setSelectedPost(updatedPost);
-    setPosts(prev => 
-      prev.map(post => post.id === selectedPost.id ? updatedPost : post)
-    );
-
-    Alert.alert('Success', `Awarded ${amount} loyalty points to ${selectedPost.customer.name}`);
-  };
-
-  const handleCustomPointsAward = () => {
-    if (!selectedPost || !customPointsAmount.trim()) return;
-    
-    const amount = parseInt(customPointsAmount);
-    if (isNaN(amount) || amount <= 0) {
-      Alert.alert('Invalid Amount', 'Please enter a valid positive number');
-      return;
-    }
-    
-    if (amount > 1000) {
-      Alert.alert('Amount Too High', 'Maximum award amount is 1000 points');
-      return;
-    }
-    
-    handleAwardCoins(selectedPost.customer.id, amount);
-    setCustomPointsAmount('');
-    setShowPointsModal(false);
   };
 
   const handleStatusChange = (postId: string, newStatus: 'new' | 'in_progress' | 'resolved' | 'closed') => {
