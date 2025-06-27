@@ -933,6 +933,14 @@ export default function ChatsScreen() {
                     
                     <View style={styles.separator} />
                     
+                    <Text style={styles.complianceTitle}>Compliance</Text>
+                    <TouchableOpacity 
+                      style={styles.complianceButton}
+                      onPress={handleComplianceClick}
+                    >
+                      <FileText size={16} color="#FFFFFF" />
+                      <Text style={styles.actionButtonText}>View History</Text>
+                    </TouchableOpacity>
 
                     <TouchableOpacity
                       style={styles.complianceButton}
@@ -1846,6 +1854,24 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
+  },
+  noChatSelected: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  noChatText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  noChatSubtext: {
+    fontSize: 16,
+    color: '#666666',
+    textAlign: 'center',
   },
   modalOverlay: {
     flex: 1,
