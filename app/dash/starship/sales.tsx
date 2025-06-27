@@ -15,7 +15,7 @@ import {
   FlatList,
   Switch,
   Dimensions,
-import { ShoppingBag, Search, Filter, Plus, Edit, Trash2, Tag, DollarSign, Package, ArrowUpRight, ShoppingCart, Clock, Calendar, ChevronDown, X, Save, Camera, Grid, List, Star, Heart, Eye, MessageCircle, Share, Zap } from 'lucide-react-native';
+import { ShoppingBag, Search, Filter, Plus, CreditCard as Edit, Trash2, Tag, DollarSign, Package, ArrowUpRight, ShoppingCart, Clock, Calendar, ChevronDown, X, Save, Camera, Grid2x2 as Grid, List, Star, Heart, Eye, MessageCircle, Share, Zap } from 'lucide-react-native';
 } from 'react-native';
 import { router } from 'expo-router';
 import { ShoppingBag, Plus, Search, Filter, Tag, DollarSign, Pencil, Trash2, Eye, Share2, MessageCircle, ChevronRight, X, Save, Camera, Package, Briefcase, ChartBar as BarChart4, Clock, ArrowUpRight, Megaphone, Zap, Grid2x2 as Grid, ArrowUp, ArrowDown, CircleCheck as CheckCircle, TriangleAlert as AlertTriangle } from 'lucide-react-native';
