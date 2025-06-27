@@ -123,6 +123,7 @@ export default function ChatsScreen() {
   const [complianceSearchQuery, setComplianceSearchQuery] = useState('');
   const [newNote, setNewNote] = useState('');
   const [complianceHistory, setComplianceHistory] = useState<ComplianceEntry[]>([]);
+  const [newComplianceNote, setNewComplianceNote] = useState('');
 
   // Initialize with mock data for testing
   useEffect(() => {
