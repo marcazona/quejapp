@@ -15,7 +15,7 @@ import {
   Switch,
 } from 'react-native';
 import { router } from 'expo-router';
-import { TrendingUp, TrendingDown, Eye, Users, MessageCircle, Star, ChartBar as BarChart3, ChartPie as PieChart, Calendar, Download, Filter, RefreshCw, Clock, Target, Award, DollarSign, TriangleAlert as AlertTriangle, CreditCard as Edit, Save, X, Plus, Building2, Globe, Phone, Mail, MapPin, Camera, Zap, Crown, Sparkles, Shield, Grid3x3 as Grid, Search, ShoppingBag, Heart, Megaphone, TrendingUp as Trending } from 'lucide-react-native';
+import { TrendingUp, TrendingDown, Eye, Users, MessageCircle, Star, ChartBar as BarChart3, ChartPie as PieChart, Calendar, Download, Filter, RefreshCw, Clock, Target, Award, DollarSign, TriangleAlert as AlertTriangle, CreditCard as Edit, Save, X, Plus, Building2, Globe, Phone, Mail, MapPin, Camera, Zap, Crown, Sparkles, Shield, Grid3x3 as Grid, Search, ShoppingBag, Heart, Megaphone, CheckCircle, Layout, Layers, ArrowUpRight } from 'lucide-react-native';
 import { useCompanyAuth } from '@/contexts/CompanyAuthContext';
 
 const { width } = Dimensions.get('window');
@@ -602,72 +602,217 @@ const MarketingContent = () => {
   const renderVisibilityTab = () => (
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
       <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Visibility Boosts</Text>
-        <View style={styles.packageInfo}>
-          <Crown size={16} color="#F39C12" />
-          <Text style={styles.packageText}>Premium Available</Text>
+        <View style={styles.visibilityHeader}>
+          <View style={styles.visibilityTitleSection}>
+            <Text style={styles.sectionTitle}>Visibility Boosts</Text>
+            <View style={styles.packageInfo}>
+              <Crown size={16} color="#F39C12" />
+              <Text style={styles.packageText}>Premium Available</Text>
+            </View>
+          </View>
+          <TouchableOpacity style={styles.premiumButton}>
+            <Crown size={16} color="#FFFFFF" />
+            <Text style={styles.premiumButtonText}>Get Premium</Text>
+          </TouchableOpacity>
         </View>
-        </View>
+        
         <Text style={styles.sectionDescription}>
-          Increase your company's visibility and attract more customers with our advanced marketing features. Choose individual boosts or get everything with our Premium Package.
+          Increase your company's visibility and attract more customers with our advanced marketing features. Choose individual boosts or get everything with our Premium Package for maximum exposure.
         </Text>
 
         {/* Category Filters */}
         <View style={styles.categoryFilters}>
-          {['all', 'visibility', 'marketing', 'sales', 'premium'].map((category) => (
+          {['All', 'Visibility', 'Marketing', 'Sales', 'Premium'].map((category) => (
             <TouchableOpacity
-              key={category}
-              style={[styles.categoryFilter, styles.categoryFilterActive]}
+              key={category.toLowerCase()}
+              style={[
+                styles.categoryFilter, 
+                category === 'All' && styles.categoryFilterActive
+              ]}
             >
-              <Text style={[styles.categoryFilterText, styles.categoryFilterTextActive]}>
-                {category.charAt(0).toUpperCase() + category.slice(1)}
+              <Text style={[
+                styles.categoryFilterText, 
+                category === 'All' && styles.categoryFilterTextActive
+              ]}>
+                {category}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        <View style={styles.boostsGrid}>
-          {visibilityBoosts.map((boost) => (
-            <View key={boost.id} style={[styles.boostCard, boost.isActive && styles.boostCardActive]}>
-              <View style={styles.boostHeader}>
-                <View style={styles.boostIcon}>
-                  {getBoostIcon(boost.type)}
-                </View>
-                <View style={styles.boostInfo}>
-                  <Text style={styles.boostName}>{boost.name}</Text>
-                  <Text style={styles.boostDuration}>{boost.duration}</Text>
-                </View>
-                <View style={styles.boostPrice}>
-                  <Text style={styles.boostPriceText}>${boost.price}</Text>
-                  {boost.type === 'premium_package' && (
-                    <Text style={styles.bestValueText}>Best Value</Text>
-                  )}
-                </View>
-              </View>
-
-              <Text style={styles.boostDescription}>{boost.description}</Text>
-
-              <View style={styles.boostBenefits}>
-                {boost.benefits.map((benefit, index) => (
-                  <View key={index} style={styles.boostBenefit}>
-                    <View style={styles.boostBenefitBullet} />
-                    <Text style={styles.boostBenefitText}>{benefit}</Text>
-                  </View>
-                ))}
-              </View>
-
-              <TouchableOpacity 
-                style={[styles.boostButton, boost.isActive && styles.boostButtonActive]}
-                onPress={() => !boost.isActive && handlePurchaseBoost(boost)}
-                disabled={boost.isActive}
-              >
-                <Text style={[styles.boostButtonText, boost.isActive && styles.boostButtonTextActive]}>
-                  {boost.isActive ? 'Active' : 'Purchase'}
-                </Text>
+        {/* Grid Layout for Visibility Features */}
+        <View style={styles.featuresGridContainer}>
+          {/* Grid Squares Visibility */}
+          <View style={styles.featureGridItem}>
+            <View style={[styles.featureIconContainer, { backgroundColor: '#3498DB20' }]}>
+              <Grid size={28} color="#3498DB" />
+            </View>
+            <Text style={styles.featureTitle}>Grid Squares Visibility</Text>
+            <Text style={styles.featureDescription}>
+              Premium grid placement across the platform for maximum exposure
+            </Text>
+            <View style={styles.featureFooter}>
+              <Text style={styles.featurePrice}>$149</Text>
+              <TouchableOpacity style={styles.featureButton}>
+                <Text style={styles.featureButtonText}>Activate</Text>
               </TouchableOpacity>
             </View>
-          ))}
+          </View>
+
+          {/* Featured Industry Listing */}
+          <View style={[styles.featureGridItem, styles.featureGridItemActive]}>
+            <View style={[styles.featureIconContainer, { backgroundColor: '#E67E2220' }]}>
+              <Building2 size={28} color="#E67E22" />
+            </View>
+            <View style={styles.featureBadge}>
+              <CheckCircle size={12} color="#FFFFFF" />
+              <Text style={styles.featureBadgeText}>Active</Text>
+            </View>
+            <Text style={styles.featureTitle}>Featured Industry Listing</Text>
+            <Text style={styles.featureDescription}>
+              Top placement in industry categories with leader badges
+            </Text>
+            <View style={styles.featureFooter}>
+              <Text style={styles.featurePrice}>$199</Text>
+              <TouchableOpacity style={[styles.featureButton, styles.featureButtonActive]}>
+                <Text style={styles.featureButtonText}>Active</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Smart Ads Targeting */}
+          <View style={styles.featureGridItem}>
+            <View style={[styles.featureIconContainer, { backgroundColor: '#E74C3C20' }]}>
+              <Target size={28} color="#E74C3C" />
+            </View>
+            <Text style={styles.featureTitle}>Smart Ads Targeting</Text>
+            <Text style={styles.featureDescription}>
+              AI-powered targeting for customers with similar claims and industry needs
+            </Text>
+            <View style={styles.featureFooter}>
+              <Text style={styles.featurePrice}>$299</Text>
+              <TouchableOpacity style={styles.featureButton}>
+                <Text style={styles.featureButtonText}>Activate</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Smart Marketing Suite */}
+          <View style={styles.featureGridItem}>
+            <View style={[styles.featureIconContainer, { backgroundColor: '#9B59B620' }]}>
+              <Megaphone size={28} color="#9B59B6" />
+            </View>
+            <Text style={styles.featureTitle}>Smart Marketing Suite</Text>
+            <Text style={styles.featureDescription}>
+              Automated outreach to high-value customers monitoring your page
+            </Text>
+            <View style={styles.featureFooter}>
+              <Text style={styles.featurePrice}>$399</Text>
+              <TouchableOpacity style={styles.featureButton}>
+                <Text style={styles.featureButtonText}>Activate</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Smart Sales Boost */}
+          <View style={styles.featureGridItem}>
+            <View style={[styles.featureIconContainer, { backgroundColor: '#27AE6020' }]}>
+              <ShoppingBag size={28} color="#27AE60" />
+            </View>
+            <Text style={styles.featureTitle}>Smart Sales Boost</Text>
+            <Text style={styles.featureDescription}>
+              Highlight your products/services in search results and offers page
+            </Text>
+            <View style={styles.featureFooter}>
+              <Text style={styles.featurePrice}>$249</Text>
+              <TouchableOpacity style={styles.featureButton}>
+                <Text style={styles.featureButtonText}>Activate</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Verified Business Badge */}
+          <View style={[styles.featureGridItem, styles.featureGridItemActive]}>
+            <View style={[styles.featureIconContainer, { backgroundColor: '#F39C1220' }]}>
+              <Shield size={28} color="#F39C12" />
+            </View>
+            <View style={styles.featureBadge}>
+              <CheckCircle size={12} color="#FFFFFF" />
+              <Text style={styles.featureBadgeText}>Active</Text>
+            </View>
+            <Text style={styles.featureTitle}>Verified Business Badge</Text>
+            <Text style={styles.featureDescription}>
+              Official verification showing you use quejapp and care about customers
+            </Text>
+            <View style={styles.featureFooter}>
+              <Text style={styles.featurePrice}>$99</Text>
+              <TouchableOpacity style={[styles.featureButton, styles.featureButtonActive]}>
+                <Text style={styles.featureButtonText}>Active</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        {/* Premium Package */}
+        <View style={styles.premiumPackageContainer}>
+          <View style={styles.premiumPackage}>
+            <View style={styles.premiumHeader}>
+              <View style={styles.premiumTitleSection}>
+                <View style={styles.premiumIconContainer}>
+                  <Crown size={28} color="#F39C12" />
+                </View>
+                <View>
+                  <Text style={styles.premiumTitle}>Premium Package</Text>
+                  <Text style={styles.premiumSubtitle}>All features included</Text>
+                </View>
+              </View>
+              <View style={styles.bestValueBadge}>
+                <Text style={styles.bestValueText}>BEST VALUE</Text>
+              </View>
+            </View>
+            
+            <Text style={styles.premiumDescription}>
+              Get complete visibility and marketing solution with all features included. Maximize your presence and reach more customers.
+            </Text>
+            
+            <View style={styles.premiumFeatures}>
+              <View style={styles.premiumFeature}>
+                <CheckCircle size={16} color="#27AE60" />
+                <Text style={styles.premiumFeatureText}>All visibility features</Text>
+              </View>
+              <View style={styles.premiumFeature}>
+                <CheckCircle size={16} color="#27AE60" />
+                <Text style={styles.premiumFeatureText}>Complete marketing suite</Text>
+              </View>
+              <View style={styles.premiumFeature}>
+                <CheckCircle size={16} color="#27AE60" />
+                <Text style={styles.premiumFeatureText}>Priority support</Text>
+              </View>
+              <View style={styles.premiumFeature}>
+                <CheckCircle size={16} color="#27AE60" />
+                <Text style={styles.premiumFeatureText}>Custom branding options</Text>
+              </View>
+              <View style={styles.premiumFeature}>
+                <CheckCircle size={16} color="#27AE60" />
+                <Text style={styles.premiumFeatureText}>Advanced analytics dashboard</Text>
+              </View>
+              <View style={styles.premiumFeature}>
+                <CheckCircle size={16} color="#27AE60" />
+                <Text style={styles.premiumFeatureText}>Dedicated account manager</Text>
+              </View>
+            </View>
+            
+            <View style={styles.premiumFooter}>
+              <View style={styles.premiumPricing}>
+                <Text style={styles.premiumPrice}>$999</Text>
+                <Text style={styles.premiumPeriod}>per year</Text>
+              </View>
+              <TouchableOpacity style={styles.premiumButton}>
+                <Text style={styles.premiumButtonText}>Upgrade Now</Text>
+                <ArrowUpRight size={16} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </View>
     </ScrollView>
@@ -1346,7 +1491,7 @@ const styles = StyleSheet.create({
   packageText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#F39C12',
+    color: '#FFD700',
   },
   bestValueText: {
     fontSize: 10,
@@ -1357,7 +1502,7 @@ const styles = StyleSheet.create({
   categoryFilters: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 20,
+    marginBottom: 24,
     flexWrap: 'wrap',
   },
   categoryFilter: {
@@ -1445,6 +1590,214 @@ const styles = StyleSheet.create({
   chartPlaceholderText: {
     fontSize: 14,
     color: '#666666',
+@@ .. @@
+  visibilityHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  visibilityTitleSection: {
+    flex: 1,
+  },
+  premiumButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#F39C12',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  premiumButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  featuresGridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    marginBottom: 24,
+  },
+  featureGridItem: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 16,
+    padding: 16,
+    width: (width - 56) / 2,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    position: 'relative',
+  },
+  featureGridItemActive: {
+    borderColor: '#27AE60',
+    backgroundColor: '#1A2A1A',
+  },
+  featureIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  featureBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#27AE60',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  featureBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  featureTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  featureDescription: {
+    fontSize: 13,
+    color: '#CCCCCC',
+    marginBottom: 16,
+    lineHeight: 18,
+    minHeight: 72,
+  },
+  featureFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  featurePrice: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#5ce1e6',
+  },
+  featureButton: {
+    backgroundColor: '#5ce1e6',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  featureButtonActive: {
+    backgroundColor: '#27AE60',
+  },
+  featureButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  premiumPackageContainer: {
+    marginBottom: 40,
+  },
+  premiumPackage: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 16,
+    padding: 24,
+    borderWidth: 2,
+    borderColor: '#F39C12',
+  },
+  premiumHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  premiumTitleSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  premiumIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: '#F39C1220',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  premiumTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  premiumSubtitle: {
+    fontSize: 14,
+    color: '#F39C12',
+    fontWeight: '600',
+  },
+  bestValueBadge: {
+    backgroundColor: '#F39C12',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  premiumDescription: {
+    fontSize: 16,
+    color: '#CCCCCC',
+    marginBottom: 20,
+    lineHeight: 24,
+  },
+  premiumFeatures: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 24,
+  },
+  premiumFeature: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    width: '50%',
+    marginBottom: 12,
+  },
+  premiumFeatureText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+  },
+  premiumFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#2A2A2A',
+    paddingTop: 20,
+  },
+  premiumPricing: {
+    flex: 1,
+  },
+  premiumPrice: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#F39C12',
+    marginBottom: 4,
+  },
+  premiumPeriod: {
+    fontSize: 14,
+    color: '#CCCCCC',
+  },
+  premiumButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#F39C12',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  premiumButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
     marginTop: 12,
     textAlign: 'center',
   },
