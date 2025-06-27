@@ -16,7 +16,7 @@ import {
   Image,
 } from 'react-native';
 import { router } from 'expo-router';
-import { ArrowLeft, MoveVertical as MoreVertical, Send, Star, User, Globe, Eye, Smile, Frown, Meh, X, Plus, Search, Filter, Calendar, Tag, MessageCircle, TriangleAlert as AlertTriangle, Clock, Shield, ThumbsUp, ThumbsDown } from 'lucide-react-native';
+import { ArrowLeft, MoveVertical as MoreVertical, Send, Star, User, Globe, Eye, Smile, Frown, Meh, X, Plus, Search, Filter, Calendar, Tag, MessageCircle, TriangleAlert as AlertTriangle, Clock, Shield, ThumbsUp, ThumbsDown, Gift } from 'lucide-react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MIN_SIDEBAR_WIDTH = 280;
@@ -84,6 +84,8 @@ export default function PostsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'review' | 'claim' | 'question' | 'complaint'>('all');
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'new' | 'in_progress' | 'resolved' | 'closed'>('all');
+  const [showPointsModal, setShowPointsModal] = useState(false);
+  const [customPointsAmount, setCustomPointsAmount] = useState('');
 
   // Initialize with mock data for testing
   useEffect(() => {
@@ -252,6 +254,46 @@ export default function PostsScreen() {
     );
 
     Alert.alert('Success', `Post status updated to ${newStatus}`);
+  };
+
+  const handleAwardCoins = (customerId: string, amount: number) => {
+    if (!selectedPost) return;
+
+    const updatedCustomer = {
+      ...selectedPost.customer,
+      loyaltyPoints: selectedPost.customer.loyaltyPoints + amount
+    };
+
+    const updatedPost = {
+      ...selectedPost,
+      customer: updatedCustomer
+    };
+    
+    setSelectedPost(updatedPost);
+    setPosts(prev => 
+      prev.map(post => post.id === selectedPost.id ? updatedPost : post)
+    );
+
+    Alert.alert('Success', `Awarded ${amount} loyalty points to ${selectedPost.customer.name}`);
+  };
+
+  const handleCustomPointsAward = () => {
+    if (!selectedPost || !customPointsAmount.trim()) return;
+    
+    const amount = parseInt(customPointsAmount);
+    if (isNaN(amount) || amount <= 0) {
+      Alert.alert('Invalid Amount', 'Please enter a valid positive number');
+      return;
+    }
+    
+    if (amount > 1000) {
+      Alert.alert('Amount Too High', 'Maximum award amount is 1000 points');
+      return;
+    }
+    
+    handleAwardCoins(selectedPost.customer.id, amount);
+    setCustomPointsAmount('');
+    setShowPointsModal(false);
   };
 
   const getMoodIcon = (mood: string) => {
@@ -694,17 +736,53 @@ export default function PostsScreen() {
                       </Text>
                     </View>
                     <View style={styles.statItem}>
-                      <Text style={styles.statLabel}>Total Posts</Text>
+                      <Text style={styles.statLabel}>Last Active</Text>
                       <Text style={styles.statValue}>
-                        {selectedPost.customer.totalPosts}
+                        {selectedPost.customer.lastActive}
                       </Text>
                     </View>
-                    <View style={styles.statItem}>
-                      <Text style={styles.statLabel}>Member Since</Text>
-                      <Text style={styles.statValue}>
-                        {new Date(selectedPost.customer.joinDate).toLocaleDateString()}
-                      </Text>
+                  </View>
+
+                  <View style={styles.customerActions}>
+                    <Text style={styles.actionsTitle}>Fidelity/Retention</Text>
+                    
+                    <View style={styles.quickActions}>
+                      <TouchableOpacity
+                        style={styles.quickActionButton}
+                        onPress={() => handleAwardCoins(selectedPost.customer.id, 5)}
+                      >
+                        <Text style={styles.quickActionText}>+5</Text>
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity
+                        style={styles.quickActionButton}
+                        onPress={() => handleAwardCoins(selectedPost.customer.id, 10)}
+                      >
+                        <Text style={styles.quickActionText}>+10</Text>
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity
+                        style={styles.quickActionButton}
+                        onPress={() => handleAwardCoins(selectedPost.customer.id, 25)}
+                      >
+                        <Text style={styles.quickActionText}>+25</Text>
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity
+                        style={[styles.quickActionButton, styles.customActionButton]}
+                        onPress={() => setShowPointsModal(true)}
+                      >
+                        <Plus size={16} color="#FFFFFF" />
+                      </TouchableOpacity>
                     </View>
+
+                    <TouchableOpacity
+                      style={styles.primaryActionButton}
+                      onPress={() => handleAwardCoins(selectedPost.customer.id, 50)}
+                    >
+                      <Gift size={16} color="#FFFFFF" />
+                      <Text style={styles.actionButtonText}>Award</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
               </View>
@@ -720,6 +798,67 @@ export default function PostsScreen() {
           )}
         </View>
       </View>
+
+      {/* Custom Points Award Modal */}
+      <Modal
+        visible={showPointsModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPointsModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.pointsModal}>
+            <View style={styles.pointsModalHeader}>
+              <Text style={styles.pointsModalTitle}>Award Custom Points</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowPointsModal(false)}
+              >
+                <X size={20} color="#666666" />
+              </TouchableOpacity>
+            </View>
+            
+            <Text style={styles.pointsModalSubtitle}>
+              Award points to {selectedPost?.customer.name}
+            </Text>
+            
+            <View style={styles.pointsInputContainer}>
+              <TextInput
+                style={styles.pointsInput}
+                value={customPointsAmount}
+                onChangeText={setCustomPointsAmount}
+                placeholder="Enter amount (1-1000)"
+                placeholderTextColor="#666666"
+                keyboardType="numeric"
+                maxLength={4}
+                autoFocus
+              />
+              <Text style={styles.pointsInputLabel}>Points</Text>
+            </View>
+            
+            <View style={styles.pointsModalActions}>
+              <TouchableOpacity
+                style={styles.pointsModalCancel}
+                onPress={() => setShowPointsModal(false)}
+              >
+                <Text style={styles.pointsModalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[
+                  styles.pointsModalConfirm,
+                  !customPointsAmount.trim() && styles.pointsModalConfirmDisabled
+                ]}
+                onPress={handleCustomPointsAward}
+                disabled={!customPointsAmount.trim()}
+              >
+                <Gift size={16} color="#FFFFFF" />
+                <Text style={styles.pointsModalConfirmText}>Award Points</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1234,6 +1373,141 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  customerActions: {
+    gap: 12,
+  },
+  actionsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  quickActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  quickActionButton: {
+    flex: 1,
+    backgroundColor: '#3A3A3A',
+    paddingVertical: 8,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#4A4A4A',
+  },
+  customActionButton: {
+    backgroundColor: '#5ce1e6',
+    borderColor: '#5ce1e6',
+  },
+  quickActionText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  primaryActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#5ce1e6',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  actionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  pointsModal: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  pointsModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  pointsModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  pointsModalSubtitle: {
+    fontSize: 14,
+    color: '#CCCCCC',
+    marginBottom: 20,
+  },
+  pointsInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2A2A2A',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#3A3A3A',
+  },
+  pointsInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  pointsInputLabel: {
+    fontSize: 14,
+    color: '#999999',
+    marginLeft: 8,
+  },
+  pointsModalActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  pointsModalCancel: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#2A2A2A',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#3A3A3A',
+  },
+  pointsModalCancelText: {
+    color: '#CCCCCC',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  pointsModalConfirm: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#5ce1e6',
+    gap: 8,
+  },
+  pointsModalConfirmDisabled: {
+    backgroundColor: '#3A3A3A',
+    opacity: 0.5,
+  },
+  pointsModalConfirmText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
   noPostSelected: {
     flex: 1,
