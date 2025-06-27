@@ -12,6 +12,7 @@ import {
   Dimensions,
   Alert,
   Modal,
+  Image,
 } from 'react-native';
 import { router } from 'expo-router';
 import { ArrowLeft, MoveVertical as MoreVertical, Send, Star, Gift, User, Globe, Eye, Smile, Frown, Meh, X, Plus } from 'lucide-react-native';
@@ -548,9 +549,9 @@ export default function ChatsScreen() {
                 <View style={styles.customerCard}>
                   <View style={styles.customerCardHeader}>
                     <View style={styles.customerCardAvatar}>
-                      {selectedConversation.customer.avatar && selectedConversation.customer.avatar.length > 0 ? (
+                      {selectedConversation.customer.avatar && selectedConversation.customer.avatar.trim().length > 0 ? (
                         <Image 
-                          source={{ uri: selectedConversation.customer.avatar }} 
+                          source={{ uri: selectedConversation.customer.avatar || '' }} 
                           style={styles.customerCardAvatarImage} 
                         />
                       ) : (
