@@ -239,6 +239,23 @@ const MarketingContent = () => {
     Alert.alert('Success', 'Banner created successfully!');
   };
 
+  const handleDeleteBanner = (bannerId: string) => {
+    Alert.alert(
+      'Delete Banner',
+      'Are you sure you want to delete this banner? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            setBanners(banners.filter(banner => banner.id !== bannerId));
+            Alert.alert('Success', 'Banner deleted successfully!');
+          },
+        },
+      ]
+    );
+  };
   const handlePurchaseBoost = (boost: VisibilityBoost) => {
     Alert.alert(
       'Purchase Visibility Boost',
@@ -776,6 +793,12 @@ const MarketingContent = () => {
                       </View>
                     )}
                   </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.bannerActionButton, styles.deleteActionButton]}
+                    onPress={() => handleDeleteBanner(banner.id)}
+                  >
+                    <X size={14} color="#E74C3C" />
+                  </TouchableOpacity>
                 ))}
               </View>
             </View>
@@ -1132,6 +1155,9 @@ const styles = StyleSheet.create({
     padding: 6,
     borderRadius: 6,
     backgroundColor: '#2A2A2A',
+  },
+  deleteActionButton: {
+    backgroundColor: '#2A1A1A',
   },
   boostsGrid: {
     gap: 16,
