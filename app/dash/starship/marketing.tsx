@@ -69,7 +69,6 @@ const MarketingContent = () => {
     phone: company?.phone || '',
     email: company?.email || '',
     logo_url: company?.logo_url || '',
-    cover_image_url: '',
     address: '',
     city: '',
     country: '',
@@ -292,7 +291,7 @@ const MarketingContent = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Logo and Cover Image */}
+        {/* Company Logo */}
         <View style={styles.imageSection}>
           <View style={styles.logoContainer}>
             <Text style={styles.imageLabel}>Company Logo</Text>
@@ -302,25 +301,6 @@ const MarketingContent = () => {
               ) : (
                 <View style={styles.logoPlaceholder}>
                   <Building2 size={32} color="#666666" />
-                </View>
-              )}
-              {isEditing && (
-                <TouchableOpacity style={styles.imageEditButton}>
-                  <Camera size={16} color="#FFFFFF" />
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-
-          <View style={styles.coverContainer}>
-            <Text style={styles.imageLabel}>Cover Image</Text>
-            <View style={styles.coverPreview}>
-              {profileData.cover_image_url ? (
-                <Image source={{ uri: profileData.cover_image_url }} style={styles.coverImage} />
-              ) : (
-                <View style={styles.coverPlaceholder}>
-                  <Camera size={24} color="#666666" />
-                  <Text style={styles.placeholderText}>Add cover image</Text>
                 </View>
               )}
               {isEditing && (
@@ -925,26 +905,23 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   imageSection: {
-    flexDirection: 'row',
-    gap: 20,
+    alignItems: 'center',
     marginBottom: 24,
   },
   logoContainer: {
-    flex: 1,
-  },
-  coverContainer: {
-    flex: 2,
+    alignItems: 'center',
   },
   imageLabel: {
     fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
     marginBottom: 8,
+    textAlign: 'center',
   },
   logoPreview: {
     position: 'relative',
-    width: 100,
-    height: 100,
+    width: 120,
+    height: 120,
     borderRadius: 12,
     overflow: 'hidden',
   },
@@ -953,24 +930,6 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   logoPlaceholder: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#2A2A2A',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 12,
-  },
-  coverPreview: {
-    position: 'relative',
-    height: 100,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  coverImage: {
-    width: '100%',
-    height: '100%',
-  },
-  coverPlaceholder: {
     width: '100%',
     height: '100%',
     backgroundColor: '#2A2A2A',
