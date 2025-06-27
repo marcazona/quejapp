@@ -688,13 +688,7 @@ export default function PostsScreen() {
 
                   <View style={styles.customerStats}>
                     <View style={styles.statItem}>
-                      <Text style={styles.statLabel}>Total Spent</Text>
-                      <Text style={styles.statValue}>
-                        ${selectedPost.customer.totalSpent.toFixed(2)}
-                      </Text>
-                    </View>
-                    <View style={styles.statItem}>
-                      <Text style={styles.statLabel}>Loyalty Points</Text>
+                      <Text style={styles.statLabel}>Points Balance</Text>
                       <Text style={styles.statValue}>
                         {selectedPost.customer.loyaltyPoints}
                       </Text>
