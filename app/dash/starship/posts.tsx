@@ -144,7 +144,6 @@ export default function PostsScreen() {
   const [showComplianceModal, setShowComplianceModal] = useState(false);
   const [customerHistory, setCustomerHistory] = useState<CustomerHistory | null>(null);
   const [complianceSearchQuery, setComplianceSearchQuery] = useState('');
-  const [newComplianceNote, setNewComplianceNote] = useState('');
   const [newNote, setNewNote] = useState('');
   const [complianceHistory, setComplianceHistory] = useState<ComplianceEntry[]>([]);
 
@@ -328,9 +327,6 @@ export default function PostsScreen() {
   const handleSendReply = () => {
     if (!newReply.trim() || !selectedPost) return;
 
-    // Clear compliance note if it was being used
-    setNewComplianceNote('');
-
     const reply: PostReply = {
       id: Date.now().toString(),
       content: newReply.trim(),
@@ -460,13 +456,13 @@ export default function PostsScreen() {
   };
 
   const handleAddComplianceNote = () => {
-    if (!newComplianceNote.trim() || !customerHistory) return;
+    if (!newNote.trim() || !customerHistory) return;
     
     const newNote: ComplianceNote = {
       id: `note_${Date.now()}`,
       customer_id: customerHistory.customer_id,
       author: 'Current User',
-      content: newComplianceNote.trim(),
+      content: newNote.trim(),
       type: 'note',
       timestamp: new Date().toISOString(),
     };
@@ -476,7 +472,7 @@ export default function PostsScreen() {
       notes: [newNote, ...prev.notes],
     } : null);
     
-    setNewComplianceNote('');
+    setNewNote('');
     Alert.alert('Success', 'Compliance note added successfully');
   };
 
@@ -1119,8 +1115,8 @@ export default function PostsScreen() {
             
             <TextInput
               style={styles.textArea}
-              value={newComplianceNote}
-              onChangeText={setNewComplianceNote}
+              value={newNote}
+              onChangeText={setNewNote}
               placeholder="Enter compliance note..."
               placeholderTextColor="#666666"
               multiline
@@ -1130,14 +1126,14 @@ export default function PostsScreen() {
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={styles.modalCancel}
-                onPress={() => setNewComplianceNote('')}
+                onPress={() => setNewNote('')}
               >
                 <Text style={styles.modalCancelText}>Cancel</Text>
               </TouchableOpacity>
               
               <TouchableOpacity
                 style={styles.modalConfirm}
-                onPress={() => setNewComplianceNote('')}
+                onPress={() => setNewNote('')}
               >
                 <Text style={styles.modalConfirmText}>Save Note</Text>
               </TouchableOpacity>
@@ -1275,15 +1271,15 @@ export default function PostsScreen() {
                   style={styles.addNoteInput}
                   placeholder="Enter compliance note..."
                   placeholderTextColor="#666666"
-                  value={newComplianceNote}
-                  onChangeText={setNewComplianceNote}
+                  value={newNote}
+                  onChangeText={setNewNote}
                   multiline
                   numberOfLines={3}
                 />
                 <TouchableOpacity
-                  style={[styles.addNoteButton, !newComplianceNote.trim() && styles.addNoteButtonDisabled]}
+                  style={[styles.addNoteButton, !newNote.trim() && styles.addNoteButtonDisabled]}
                   onPress={handleAddComplianceNote}
-                  disabled={!newComplianceNote.trim()}
+                  disabled={!newNote.trim()}
                 >
                   <Save size={16} color="#FFFFFF" />
                   <Text style={styles.addNoteButtonText}>Add Note</Text>
