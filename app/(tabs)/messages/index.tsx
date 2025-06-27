@@ -68,9 +68,6 @@ const ConversationCard = ({ conversation }: { conversation: ChatConversation }) 
           <Text style={styles.userName}>
             {company?.name || 'Company Support'}
           </Text>
-          <Text style={styles.timestamp}>
-            {lastMessage ? getTimeAgo(lastMessage.created_at) : getTimeAgo(conversation.created_at)}
-          </Text>
         </View>
         
         {/* Last Message Preview */}
@@ -95,6 +92,18 @@ const ConversationCard = ({ conversation }: { conversation: ChatConversation }) 
               {lastMessage?.content || 'Start a conversation...'}
             </Text>
           )}
+        </View>
+        
+        <View style={styles.conversationMeta}>
+          <View style={styles.statusRow}>
+            <View style={styles.statusIndicator} />
+            <Text style={styles.statusText}>
+              {conversation.status === 'pending' ? 'connecting...' : 'active'}
+            </Text>
+          </View>
+          <Text style={styles.messageTime}>
+            {lastMessage ? getTimeAgo(lastMessage.created_at) : getTimeAgo(conversation.created_at)}
+          </Text>
         </View>
       </View>
 
@@ -448,6 +457,31 @@ const styles = StyleSheet.create({
   },
   dot3: {
     opacity: 1,
+  },
+  conversationMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  statusText: {
+    fontSize: 12,
+    color: '#666666',
+    fontWeight: '500',
+  },
+  messageTime: {
+    fontSize: 12,
+    color: '#666666',
+    fontWeight: '500',
   },
   unreadBadge: {
     backgroundColor: '#5ce1e6',
