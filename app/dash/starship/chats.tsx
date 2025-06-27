@@ -614,12 +614,6 @@ export default function ChatsScreen() {
 
                   <View style={styles.customerStats}>
                     <View style={styles.statItem}>
-                      <Text style={styles.statLabel}>Total Spent</Text>
-                      <Text style={styles.statValue}>
-                        ${selectedConversation.customer.totalSpent.toFixed(2)}
-                      </Text>
-                    </View>
-                    <View style={styles.statItem}>
                       <Text style={styles.statLabel}>Loyalty Points</Text>
                       <Text style={styles.statValue}>
                         {selectedConversation.customer.loyaltyPoints}
