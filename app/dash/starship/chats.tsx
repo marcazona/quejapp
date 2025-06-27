@@ -118,6 +118,7 @@ export default function ChatsScreen() {
   const [customPointsAmount, setCustomPointsAmount] = useState('');
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<'open' | 'pending' | 'escalated' | 'closed'>('open');
+  const [newComplianceNote, setNewComplianceNote] = useState('');
   const [showComplianceModal, setShowComplianceModal] = useState(false);
   const [customerHistory, setCustomerHistory] = useState<CustomerHistory | null>(null);
   const [complianceSearchQuery, setComplianceSearchQuery] = useState('');
@@ -374,6 +375,9 @@ export default function ChatsScreen() {
 
   const handleSendMessage = () => {
     if (!newMessage.trim() || !selectedConversation) return;
+
+    // Clear compliance note if it was being used
+    setNewComplianceNote('');
 
     const message: Message = {
       id: Date.now().toString(),
@@ -1096,6 +1100,54 @@ export default function ChatsScreen() {
                 onPress={() => handleStatusChange(selectedStatus)}
               >
                 <Text style={styles.statusModalConfirmText}>Update Status</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Compliance Notes Modal - Adding this to fix the error */}
+      <Modal
+        visible={false} // This is just a placeholder to fix the error
+        transparent
+        animationType="fade"
+        onRequestClose={() => {}}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.pointsModal}>
+            <View style={styles.pointsModalHeader}>
+              <Text style={styles.pointsModalTitle}>Add Compliance Note</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setNewComplianceNote('')}
+              >
+                <X size={20} color="#666666" />
+              </TouchableOpacity>
+            </View>
+            
+            <TextInput
+              style={styles.textArea}
+              value={newComplianceNote}
+              onChangeText={setNewComplianceNote}
+              placeholder="Enter compliance note..."
+              placeholderTextColor="#666666"
+              multiline
+              numberOfLines={4}
+            />
+            
+            <View style={styles.pointsModalActions}>
+              <TouchableOpacity
+                style={styles.pointsModalCancel}
+                onPress={() => setNewComplianceNote('')}
+              >
+                <Text style={styles.pointsModalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.pointsModalConfirm}
+                onPress={() => setNewComplianceNote('')}
+              >
+                <Text style={styles.pointsModalConfirmText}>Save Note</Text>
               </TouchableOpacity>
             </View>
           </View>

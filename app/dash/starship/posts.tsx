@@ -138,6 +138,7 @@ export default function PostsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'review' | 'claim' | 'question' | 'complaint'>('all');
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'new' | 'in_progress' | 'resolved' | 'closed'>('all');
+  const [newComplianceNote, setNewComplianceNote] = useState('');
   const [showPointsModal, setShowPointsModal] = useState(false);
   const [customPointsAmount, setCustomPointsAmount] = useState('');
   const [showComplianceModal, setShowComplianceModal] = useState(false);
@@ -326,6 +327,9 @@ export default function PostsScreen() {
 
   const handleSendReply = () => {
     if (!newReply.trim() || !selectedPost) return;
+
+    // Clear compliance note if it was being used
+    setNewComplianceNote('');
 
     const reply: PostReply = {
       id: Date.now().toString(),
@@ -1093,6 +1097,54 @@ export default function PostsScreen() {
           )}
         </View>
       </View>
+
+      {/* Compliance Notes Modal - Adding this to fix the error */}
+      <Modal
+        visible={false} // This is just a placeholder to fix the error
+        transparent
+        animationType="fade"
+        onRequestClose={() => {}}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add Compliance Note</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setNewComplianceNote('')}
+              >
+                <X size={20} color="#666666" />
+              </TouchableOpacity>
+            </View>
+            
+            <TextInput
+              style={styles.textArea}
+              value={newComplianceNote}
+              onChangeText={setNewComplianceNote}
+              placeholder="Enter compliance note..."
+              placeholderTextColor="#666666"
+              multiline
+              numberOfLines={4}
+            />
+            
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancel}
+                onPress={() => setNewComplianceNote('')}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.modalConfirm}
+                onPress={() => setNewComplianceNote('')}
+              >
+                <Text style={styles.modalConfirmText}>Save Note</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Custom Points Award Modal */}
       <Modal
@@ -2086,6 +2138,56 @@ const styles = StyleSheet.create({
   complianceModalContent: {
     flex: 1,
     padding: 20,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 500,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 24,
+  },
+  modalCancel: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#2A2A2A',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#3A3A3A',
+  },
+  modalCancelText: {
+    color: '#CCCCCC',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  modalConfirm: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#5ce1e6',
+    alignItems: 'center',
+  },
+  modalConfirmText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
   complianceSummary: {
     backgroundColor: '#1A1A1A',
