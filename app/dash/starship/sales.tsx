@@ -1,3 +1,4 @@
+/*
 Here's the fixed version with all missing closing brackets added:
 
 ```typescript
@@ -14,3 +15,22 @@ The file was missing two closing brackets:
 2. The final closing bracket for the StyleSheet.create styles object
 
 The fixed version should now be properly balanced with all opening and closing brackets matched.
+*/
+
+import { View, Text, StyleSheet } from 'react-native';
+
+export default function Sales() {
+  return (
+    <View style={styles.container}>
+      <Text>Sales Dashboard</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});
