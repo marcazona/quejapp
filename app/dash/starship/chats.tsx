@@ -671,7 +671,7 @@ export default function ChatsScreen() {
                       onPress={() => handleAwardCoins(selectedConversation.customer.id, 50)}
                     >
                       <Gift size={16} color="#FFFFFF" />
-                      <Text style={styles.actionButtonText}>Award 50 Points (Bonus)</Text>
+                      <Text style={styles.actionButtonText}>Award</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
