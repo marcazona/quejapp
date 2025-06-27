@@ -13,7 +13,6 @@ import {
   Alert,
   Modal,
   Image,
-  FlatList,
 } from 'react-native';
 import { router } from 'expo-router';
 import { ArrowLeft, MoveVertical as MoreVertical, Send, Star, Gift, User, Globe, Eye, Smile, Frown, Meh, X, Plus, FileText, Clock, UserCheck, MessageSquare, Save } from 'lucide-react-native';
