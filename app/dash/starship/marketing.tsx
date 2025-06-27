@@ -250,7 +250,7 @@ const MarketingContent = () => {
           style: 'destructive',
           onPress: () => {
             setBanners(banners.filter(banner => banner.id !== bannerId));
-            Alert.alert('Success', 'Banner deleted successfully!');
+            // Banner deleted successfully - no need for additional alert
           },
         },
       ]
