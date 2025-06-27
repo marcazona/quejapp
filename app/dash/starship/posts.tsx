@@ -120,7 +120,7 @@ export default function PostsScreen() {
             content: 'Thank you so much for your wonderful feedback! We\'re thrilled to hear about your positive experience.',
             timestamp: '2 hours ago',
             isFromCompany: true,
-            authorName: 'Support Team',
+            authorName: 'John Smith (Support Team)',
           },
         ],
         createdAt: '2024-01-15T10:30:00Z',
@@ -161,7 +161,7 @@ export default function PostsScreen() {
             content: 'We sincerely apologize for this issue. We\'re processing a replacement for you right away. You should receive it within 2-3 business days.',
             timestamp: '1 hour ago',
             isFromCompany: true,
-            authorName: 'Support Team',
+            authorName: 'Sarah Johnson (Support Team)',
           },
         ],
         createdAt: '2024-01-14T09:45:00Z',
@@ -223,7 +223,7 @@ export default function PostsScreen() {
       content: newReply.trim(),
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       isFromCompany: true,
-      authorName: 'Support Team',
+      authorName: 'Current User (Support Team)',
     };
 
     const updatedPost = {
