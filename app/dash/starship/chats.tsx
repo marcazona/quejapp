@@ -79,6 +79,7 @@ export default function ChatsScreen() {
         customer: {
           id: 'cust1',
           name: 'Sarah Johnson',
+          avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=100&h=100',
           email: 'sarah.johnson@email.com',
           phone: '+1-555-0123',
           totalSpent: 1250.00,
@@ -123,6 +124,7 @@ export default function ChatsScreen() {
         customer: {
           id: 'cust2',
           name: 'Mike Chen',
+          avatar: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=100&h=100',
           email: 'mike.chen@email.com',
           phone: '+1-555-0456',
           totalSpent: 890.50,
@@ -167,6 +169,7 @@ export default function ChatsScreen() {
         customer: {
           id: 'cust3',
           name: 'Emma Davis',
+          avatar: 'https://images.pexels.com/photos/1036622/pexels-photo-1036622.jpeg?auto=compress&cs=tinysrgb&w=100&h=100',
           email: 'emma.davis@email.com',
           phone: '+1-555-0789',
           totalSpent: 2100.75,
@@ -204,6 +207,7 @@ export default function ChatsScreen() {
         customer: {
           id: 'cust4',
           name: 'Alex Rodriguez',
+          avatar: 'https://images.pexels.com/photos/1065084/pexels-photo-1065084.jpeg?auto=compress&cs=tinysrgb&w=100&h=100',
           email: 'alex.rodriguez@email.com',
           phone: '+1-555-0321',
           totalSpent: 450.25,
@@ -544,7 +548,14 @@ export default function ChatsScreen() {
                 <View style={styles.customerCard}>
                   <View style={styles.customerCardHeader}>
                     <View style={styles.customerCardAvatar}>
-                      <User size={32} color="#FFFFFF" />
+                      {selectedConversation.customer.avatar ? (
+                        <Image 
+                          source={{ uri: selectedConversation.customer.avatar }} 
+                          style={styles.customerCardAvatarImage} 
+                        />
+                      ) : (
+                        <User size={32} color="#FFFFFF" />
+                      )}
                     </View>
                     <View style={styles.customerCardInfo}>
                       <Text style={styles.customerCardName}>
@@ -1140,6 +1151,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+    overflow: 'hidden',
+  },
+  customerCardAvatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 25,
   },
   customerCardInfo: {
     flex: 1,
