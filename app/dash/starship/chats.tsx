@@ -120,7 +120,6 @@ export default function ChatsScreen() {
   const [showComplianceModal, setShowComplianceModal] = useState(false);
   const [customerHistory, setCustomerHistory] = useState<CustomerHistory | null>(null);
   const [complianceSearchQuery, setComplianceSearchQuery] = useState('');
-  const [newComplianceNote, setNewComplianceNote] = useState('');
   const [newNote, setNewNote] = useState('');
   const [complianceHistory, setComplianceHistory] = useState<ComplianceEntry[]>([]);
 
