@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { TrendingUp, TrendingDown, Eye, Users, MessageCircle, Star, ChartBar as BarChart3, ChartPie as PieChart, Calendar, Download, Filter, RefreshCw, Clock, Target, Award, DollarSign, TriangleAlert as AlertTriangle, CreditCard as Edit3, Save, X, Plus, Building2, Globe, Phone, Mail, MapPin, Camera, Zap, Crown, Sparkles, Shield } from 'lucide-react-native';
+import { TrendingUp, TrendingDown, Eye, Users, MessageCircle, Star, ChartBar as BarChart3, ChartPie as PieChart, Calendar, Download, Filter, RefreshCw, Clock, Target, Award, DollarSign, TriangleAlert as AlertTriangle, Edit, Save, X, Plus, Building2, Globe, Phone, Mail, MapPin, Camera, Zap, Crown, Sparkles, Shield } from 'lucide-react-native';
 import { useCompanyAuth } from '@/contexts/CompanyAuthContext';
 
 const { width } = Dimensions.get('window');
@@ -301,7 +302,7 @@ const MarketingContent = () => {
             style={styles.editButton}
             onPress={() => setIsEditing(!isEditing)}
           >
-            <Edit3 size={16} color="#5ce1e6" />
+            <Edit size={16} color="#5ce1e6" />
             <Text style={styles.editButtonText}>
               {isEditing ? 'Cancel' : 'Edit'}
             </Text>
@@ -514,7 +515,7 @@ const MarketingContent = () => {
                   </Text>
                   <View style={styles.bannerActions}>
                     <TouchableOpacity style={styles.bannerActionButton}>
-                      <Edit3 size={14} color="#5ce1e6" />
+                      <Edit size={14} color="#5ce1e6" />
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.bannerActionButton}>
                       <Eye size={14} color="#666666" />
