@@ -16,11 +16,26 @@ import {
   Image,
 } from 'react-native';
 import { router } from 'expo-router';
-import { ArrowLeft, MoveVertical as MoreVertical, Send, Star, User, Globe, Eye, Smile, Frown, Meh, X, Plus, Search, Filter, Calendar, Tag, MessageCircle, TriangleAlert as AlertTriangle, Clock, Shield, ThumbsUp, ThumbsDown, Gift, FileText, UserCheck, Save } from 'lucide-react-native';
+import { ArrowLeft, MoveVertical as MoreVertical, Send, Star, User, Globe, Eye, Smile, Frown, Meh, X, Plus, Search, Filter, Calendar, Tag, MessageCircle, TriangleAlert as AlertTriangle, Clock, Shield, ThumbsUp, ThumbsDown, FileText, CheckCircle } from 'lucide-react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MIN_SIDEBAR_WIDTH = 280;
 const MAX_SIDEBAR_WIDTH = SCREEN_WIDTH * 0.4;
+
+interface ComplianceEntry {
+  id: string;
+  type: 'chat' | 'post';
+  sourceId: string;
+  customerId: string;
+  customerName: string;
+  issue: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  status: 'open' | 'investigating' | 'resolved' | 'escalated';
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+  assignedTo?: string;
+}
 
 interface Customer {
   id: string;
@@ -138,6 +153,15 @@ export default function PostsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'review' | 'claim' | 'question' | 'complaint'>('all');
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'new' | 'in_progress' | 'resolved' | 'closed'>('all');
+  
+  // Compliance states
+  const [showComplianceModal, setShowComplianceModal] = useState(false);
+  const [complianceEntries, setComplianceEntries] = useState<ComplianceEntry[]>([]);
+  const [complianceSearchQuery, setComplianceSearchQuery] = useState('');
+  const [newComplianceNote, setNewComplianceNote] = useState('');
+  const [selectedComplianceEntry, setSelectedComplianceEntry] = useState<ComplianceEntry | null>(null);
+  const [complianceFilter, setComplianceFilter] = useState<'all' | 'chat' | 'post'>('all');
+  const [complianceSeverityFilter, setComplianceSeverityFilter] = useState<'all' | 'low' | 'medium' | 'high' | 'critical'>('all');
   const [showPointsModal, setShowPointsModal] = useState(false);
   const [customPointsAmount, setCustomPointsAmount] = useState('');
   const [showComplianceModal, setShowComplianceModal] = useState(false);
@@ -322,6 +346,67 @@ export default function PostsScreen() {
       id: '1',
       name: 'TechCorp Solutions',
     });
+    
+    // Initialize compliance entries with mixed chat and post data
+    const mockComplianceEntries: ComplianceEntry[] = [
+      {
+        id: 'comp1',
+        type: 'chat',
+        sourceId: 'conv_1_user1',
+        customerId: 'cust1',
+        customerName: 'Sarah Johnson',
+        issue: 'Customer reported inappropriate response from support agent',
+        severity: 'high',
+        status: 'investigating',
+        notes: 'Reviewing chat logs and agent training records',
+        createdAt: new Date(Date.now() - 86400000).toISOString(),
+        updatedAt: new Date(Date.now() - 3600000).toISOString(),
+        assignedTo: 'Manager Smith',
+      },
+      {
+        id: 'comp2',
+        type: 'post',
+        sourceId: '2',
+        customerId: 'cust2',
+        customerName: 'Mike Chen',
+        issue: 'Public claim contains potentially false information',
+        severity: 'medium',
+        status: 'open',
+        notes: 'Need to verify product specifications mentioned in claim',
+        createdAt: new Date(Date.now() - 172800000).toISOString(),
+        updatedAt: new Date(Date.now() - 172800000).toISOString(),
+      },
+      {
+        id: 'comp3',
+        type: 'chat',
+        sourceId: 'conv_2_user3',
+        customerId: 'cust3',
+        customerName: 'Emma Davis',
+        issue: 'Data privacy concern raised during chat',
+        severity: 'critical',
+        status: 'escalated',
+        notes: 'Escalated to legal team for review',
+        createdAt: new Date(Date.now() - 259200000).toISOString(),
+        updatedAt: new Date(Date.now() - 86400000).toISOString(),
+        assignedTo: 'Legal Team',
+      },
+      {
+        id: 'comp4',
+        type: 'post',
+        sourceId: '1',
+        customerId: 'cust1',
+        customerName: 'Sarah Johnson',
+        issue: 'Review contains competitor comparison that may violate guidelines',
+        severity: 'low',
+        status: 'resolved',
+        notes: 'Contacted customer, agreed to modify review content',
+        createdAt: new Date(Date.now() - 345600000).toISOString(),
+        updatedAt: new Date(Date.now() - 172800000).toISOString(),
+        assignedTo: 'Content Moderator',
+      },
+    ];
+    
+    setComplianceEntries(mockComplianceEntries);
   }, []);
 
   const handleSendReply = () => {
@@ -362,6 +447,51 @@ export default function PostsScreen() {
 
     Alert.alert('Success', `Post status updated to ${newStatus}`);
   };
+
+  const handleAddComplianceEntry = () => {
+    if (!selectedPost || !newComplianceNote.trim()) return;
+    
+    const newEntry: ComplianceEntry = {
+      id: Date.now().toString(),
+      type: 'post',
+      sourceId: selectedPost.id,
+      customerId: selectedPost.customer.id,
+      customerName: selectedPost.customer.name,
+      issue: newComplianceNote.trim(),
+      severity: 'medium',
+      status: 'open',
+      notes: '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    
+    setComplianceEntries(prev => [newEntry, ...prev]);
+    setNewComplianceNote('');
+    Alert.alert('Success', 'Compliance entry created successfully');
+  };
+
+  const handleUpdateComplianceEntry = (entryId: string, updates: Partial<ComplianceEntry>) => {
+    setComplianceEntries(prev => 
+      prev.map(entry => 
+        entry.id === entryId 
+          ? { ...entry, ...updates, updatedAt: new Date().toISOString() }
+          : entry
+      )
+    );
+    
+    if (selectedComplianceEntry?.id === entryId) {
+      setSelectedComplianceEntry(prev => prev ? { ...prev, ...updates } : null);
+    }
+  };
+
+  const filteredComplianceEntries = complianceEntries.filter(entry => {
+    const matchesSearch = entry.issue.toLowerCase().includes(complianceSearchQuery.toLowerCase()) ||
+                         entry.customerName.toLowerCase().includes(complianceSearchQuery.toLowerCase());
+    const matchesType = complianceFilter === 'all' || entry.type === complianceFilter;
+    const matchesSeverity = complianceSeverityFilter === 'all' || entry.severity === complianceSeverityFilter;
+    
+    return matchesSearch && matchesType && matchesSeverity;
+  });
 
   const handleComplianceClick = async () => {
     if (!selectedPost) return;
@@ -655,6 +785,26 @@ export default function PostsScreen() {
     }
   };
 
+  const getComplianceSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'critical': return '#E74C3C';
+      case 'high': return '#E67E22';
+      case 'medium': return '#F39C12';
+      case 'low': return '#27AE60';
+      default: return '#666666';
+    }
+  };
+
+  const getComplianceStatusColor = (status: string) => {
+    switch (status) {
+      case 'open': return '#E67E22';
+      case 'investigating': return '#3498DB';
+      case 'resolved': return '#27AE60';
+      case 'escalated': return '#E74C3C';
+      default: return '#666666';
+    }
+  };
+
   const filteredPosts = posts.filter(post => {
     const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -704,8 +854,11 @@ export default function PostsScreen() {
           </Text>
         </View>
         
-        <TouchableOpacity style={styles.headerAction}>
-          <MoreVertical size={24} color="#FFFFFF" />
+        <TouchableOpacity 
+          style={styles.headerAction}
+          onPress={() => setShowComplianceModal(true)}
+        >
+          <FileText size={24} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
@@ -1078,6 +1231,28 @@ export default function PostsScreen() {
                       <Gift size={16} color="#FFFFFF" />
                       <Text style={styles.actionButtonText}>Award</Text>
                     </TouchableOpacity>
+                    
+                    <Text style={styles.actionsTitle}>Compliance</Text>
+                    
+                    <View style={styles.complianceSection}>
+                      <TextInput
+                        style={styles.complianceInput}
+                        value={newComplianceNote}
+                        onChangeText={setNewComplianceNote}
+                        placeholder="Report compliance issue..."
+                        placeholderTextColor="#666666"
+                        multiline
+                        maxLength={200}
+                      />
+                      <TouchableOpacity
+                        style={[styles.complianceButton, !newComplianceNote.trim() && styles.complianceButtonDisabled]}
+                        onPress={handleAddComplianceEntry}
+                        disabled={!newComplianceNote.trim()}
+                      >
+                        <AlertTriangle size={16} color="#FFFFFF" />
+                        <Text style={styles.complianceButtonText}>Report Issue</Text>
+                      </TouchableOpacity>
+                    </div>
                   </View>
                 </View>
               </View>
@@ -1094,6 +1269,108 @@ export default function PostsScreen() {
         </View>
       </View>
 
+      {/* Compliance Modal */}
+      <Modal
+        visible={showComplianceModal}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setShowComplianceModal(false)}
+      >
+        <SafeAreaView style={styles.complianceModalContainer}>
+          <View style={styles.complianceModalHeader}>
+            <TouchableOpacity onPress={() => setShowComplianceModal(false)}>
+              <X size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+            <Text style={styles.complianceModalTitle}>Compliance Dashboard</Text>
+            <View style={styles.complianceModalPlaceholder} />
+          </View>
+
+          <View style={styles.complianceFilters}>
+            <View style={styles.complianceSearchBar}>
+              <Search size={16} color="#666666" />
+              <TextInput
+                style={styles.complianceSearchInput}
+                placeholder="Search compliance entries..."
+                placeholderTextColor="#666666"
+                value={complianceSearchQuery}
+                onChangeText={setComplianceSearchQuery}
+              />
+            </View>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.complianceFilterRow}>
+              {['all', 'chat', 'post'].map((filter) => (
+                <TouchableOpacity
+                  key={filter}
+                  style={[
+                    styles.complianceFilterChip,
+                    complianceFilter === filter && styles.activeComplianceFilterChip
+                  ]}
+                  onPress={() => setComplianceFilter(filter as any)}
+                >
+                  <Text style={[
+                    styles.complianceFilterChipText,
+                    complianceFilter === filter && styles.activeComplianceFilterChipText
+                  ]}>
+                    {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              
+              {['all', 'critical', 'high', 'medium', 'low'].map((severity) => (
+                <TouchableOpacity
+                  key={severity}
+                  style={[
+                    styles.complianceFilterChip,
+                    complianceSeverityFilter === severity && styles.activeComplianceFilterChip
+                  ]}
+                  onPress={() => setComplianceSeverityFilter(severity as any)}
+                >
+                  <Text style={[
+                    styles.complianceFilterChipText,
+                    complianceSeverityFilter === severity && styles.activeComplianceFilterChipText
+                  ]}>
+                    {severity.charAt(0).toUpperCase() + severity.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          <FlatList
+            data={filteredComplianceEntries}
+            keyExtractor={(item) => item.id}
+            style={styles.complianceList}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.complianceEntryCard}
+                onPress={() => setSelectedComplianceEntry(item)}
+              >
+                <View style={styles.complianceEntryHeader}>
+                  <View style={styles.complianceEntryType}>
+                    {item.type === 'chat' ? (
+                      <MessageCircle size={16} color="#3498DB" />
+                    ) : (
+                      <FileText size={16} color="#9B59B6" />
+                    )}
+                    <Text style={styles.complianceEntryTypeText}>
+                      {item.type.toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={styles.complianceEntryBadges}>
+                    <View style={[
+                      styles.complianceSeverityBadge,
+                      { backgroundColor: getComplianceSeverityColor(item.severity) }
+                    ]}>
+                      <Text style={styles.complianceBadgeText}>{item.severity}</Text>
+                    </View>
+                    <View style={[
+                      styles.complianceStatusBadge,
+                      { backgroundColor: getComplianceStatusColor(item.status) }
+                    ]}>
+                      <Text style={styles.complianceBadgeText}>{item.status}</Text>
+                    </View>
+                  </View>
+                </View>
       {/* Custom Points Award Modal */}
       <Modal
         visible={showPointsModal}
@@ -2054,6 +2331,264 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666666',
     textAlign: 'center',
+  },
+  complianceSection: {
+    marginTop: 16,
+    gap: 12,
+  },
+  complianceInput: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#3A3A3A',
+    minHeight: 60,
+    textAlignVertical: 'top',
+  },
+  complianceButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#E74C3C',
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  complianceButtonDisabled: {
+    backgroundColor: '#3A3A3A',
+    opacity: 0.5,
+  },
+  complianceButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  // Compliance Modal Styles
+  complianceModalContainer: {
+    flex: 1,
+    backgroundColor: '#0A0A0A',
+  },
+  complianceModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#1A1A1A',
+    borderBottomWidth: 1,
+    borderBottomColor: '#2A2A2A',
+  },
+  complianceModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  complianceModalPlaceholder: {
+    width: 24,
+  },
+  complianceFilters: {
+    padding: 16,
+    backgroundColor: '#1A1A1A',
+    borderBottomWidth: 1,
+    borderBottomColor: '#2A2A2A',
+  },
+  complianceSearchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2A2A2A',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 12,
+  },
+  complianceSearchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#FFFFFF',
+  },
+  complianceFilterRow: {
+    flexDirection: 'row',
+  },
+  complianceFilterChip: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#3A3A3A',
+  },
+  activeComplianceFilterChip: {
+    backgroundColor: '#5ce1e6',
+    borderColor: '#5ce1e6',
+  },
+  complianceFilterChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#CCCCCC',
+  },
+  activeComplianceFilterChipText: {
+    color: '#FFFFFF',
+  },
+  complianceList: {
+    flex: 1,
+    padding: 16,
+  },
+  complianceEntryCard: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  complianceEntryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  complianceEntryType: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  complianceEntryTypeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#666666',
+  },
+  complianceEntryBadges: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  complianceSeverityBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  complianceStatusBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  complianceBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    textTransform: 'uppercase',
+  },
+  complianceEntryIssue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 8,
+    lineHeight: 18,
+  },
+  complianceEntryMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  complianceEntryCustomer: {
+    fontSize: 12,
+    color: '#CCCCCC',
+    fontWeight: '500',
+  },
+  complianceEntryDate: {
+    fontSize: 12,
+    color: '#666666',
+  },
+  complianceEntryAssigned: {
+    fontSize: 11,
+    color: '#5ce1e6',
+    fontWeight: '500',
+  },
+  complianceEmptyState: {
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  complianceEmptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  complianceEmptyMessage: {
+    fontSize: 14,
+    color: '#666666',
+    textAlign: 'center',
+  },
+  // Compliance Detail Modal Styles
+  complianceDetailContainer: {
+    flex: 1,
+    backgroundColor: '#0A0A0A',
+  },
+  complianceDetailHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#1A1A1A',
+    borderBottomWidth: 1,
+    borderBottomColor: '#2A2A2A',
+  },
+  complianceDetailTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  complianceDetailContent: {
+    flex: 1,
+    padding: 20,
+  },
+  complianceDetailSection: {
+    marginBottom: 20,
+  },
+  complianceDetailRow: {
+    flexDirection: 'row',
+    gap: 20,
+  },
+  complianceDetailLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#5ce1e6',
+    marginBottom: 8,
+  },
+  complianceDetailText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    lineHeight: 24,
+  },
+  complianceDetailActions: {
+    gap: 12,
+    marginTop: 20,
+  },
+  complianceActionButton: {
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  investigatingButton: {
+    backgroundColor: '#3498DB',
+  },
+  escalateButton: {
+    backgroundColor: '#E74C3C',
+  },
+  resolveButton: {
+    backgroundColor: '#27AE60',
+  },
+  complianceActionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   modalCloseButton: {
     padding: 8,
