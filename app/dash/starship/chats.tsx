@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { ArrowLeft, MoveVertical as MoreVertical, Send, Star, Gift, User, Globe, Eye, Smile, Frown, Meh, X, Plus, FileText, Clock, UserCheck, MessageSquare, Save } from 'lucide-react-native';
+import { Search } from 'lucide-react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MIN_SIDEBAR_WIDTH = 250;
@@ -76,6 +77,35 @@ interface Company {
   name: string;
 }
 
+interface ComplianceNote {
+  id: string;
+  customer_id: string;
+  author: string;
+  content: string;
+  type: 'note' | 'status_change' | 'escalation' | 'resolution';
+  timestamp: string;
+  metadata?: {
+    old_status?: string;
+    new_status?: string;
+    reason?: string;
+  };
+}
+
+interface CustomerHistory {
+  customer_id: string;
+  conversations: Array<{
+    id: string;
+    date: string;
+    status: string;
+    messages_count: number;
+    last_message: string;
+    resolution_time?: string;
+  }>;
+  notes: ComplianceNote[];
+  total_interactions: number;
+  satisfaction_score: number;
+  escalations_count: number;
+}
 export default function ChatsScreen() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
@@ -87,6 +117,10 @@ export default function ChatsScreen() {
   const [customPointsAmount, setCustomPointsAmount] = useState('');
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<'open' | 'pending' | 'escalated' | 'closed'>('open');
+  const [showComplianceModal, setShowComplianceModal] = useState(false);
+  const [customerHistory, setCustomerHistory] = useState<CustomerHistory | null>(null);
+  const [complianceSearchQuery, setComplianceSearchQuery] = useState('');
+  const [newComplianceNote, setNewComplianceNote] = useState('');
   const [showComplianceModal, setShowComplianceModal] = useState(false);
   const [newNote, setNewNote] = useState('');
   const [complianceHistory, setComplianceHistory] = useState<ComplianceEntry[]>([]);
@@ -420,6 +454,112 @@ export default function ChatsScreen() {
     Alert.alert('Status Updated', `Conversation status changed to ${newStatus}`);
   };
 
+  const handleComplianceClick = async () => {
+    if (!selectedConversation) return;
+    
+    // Mock customer history data
+    const mockHistory: CustomerHistory = {
+      customer_id: selectedConversation.customer.id,
+      conversations: [
+        {
+          id: 'conv_1',
+          date: '2024-01-15',
+          status: 'resolved',
+          messages_count: 12,
+          last_message: 'Thank you for your help!',
+          resolution_time: '2h 15m',
+        },
+        {
+          id: 'conv_2',
+          date: '2024-01-10',
+          status: 'resolved',
+          messages_count: 8,
+          last_message: 'Issue resolved successfully.',
+          resolution_time: '1h 45m',
+        },
+        {
+          id: 'conv_3',
+          date: '2024-01-05',
+          status: 'resolved',
+          messages_count: 15,
+          last_message: 'Perfect, everything works now.',
+          resolution_time: '3h 20m',
+        },
+      ],
+      notes: [
+        {
+          id: 'note_1',
+          customer_id: selectedConversation.customer.id,
+          author: 'John Smith',
+          content: 'Customer is very satisfied with our service. Prefers email communication.',
+          type: 'note',
+          timestamp: '2024-01-15T14:30:00Z',
+        },
+        {
+          id: 'note_2',
+          customer_id: selectedConversation.customer.id,
+          author: 'Sarah Johnson',
+          content: 'Escalated to technical team due to complex integration issue.',
+          type: 'escalation',
+          timestamp: '2024-01-10T09:15:00Z',
+          metadata: {
+            reason: 'Technical complexity',
+          },
+        },
+        {
+          id: 'note_3',
+          customer_id: selectedConversation.customer.id,
+          author: 'Mike Davis',
+          content: 'Status changed from pending to resolved after successful fix deployment.',
+          type: 'status_change',
+          timestamp: '2024-01-10T16:45:00Z',
+          metadata: {
+            old_status: 'pending',
+            new_status: 'resolved',
+          },
+        },
+      ],
+      total_interactions: 3,
+      satisfaction_score: 4.8,
+      escalations_count: 1,
+    };
+    
+    setCustomerHistory(mockHistory);
+    setShowComplianceModal(true);
+  };
+
+  const handleAddComplianceNote = () => {
+    if (!newComplianceNote.trim() || !customerHistory) return;
+    
+    const newNote: ComplianceNote = {
+      id: `note_${Date.now()}`,
+      customer_id: customerHistory.customer_id,
+      author: 'Current User',
+      content: newComplianceNote.trim(),
+      type: 'note',
+      timestamp: new Date().toISOString(),
+    };
+    
+    setCustomerHistory(prev => prev ? {
+      ...prev,
+      notes: [newNote, ...prev.notes],
+    } : null);
+    
+    setNewComplianceNote('');
+    Alert.alert('Success', 'Compliance note added successfully');
+  };
+
+  const filteredHistory = customerHistory ? {
+    ...customerHistory,
+    conversations: customerHistory.conversations.filter(conv =>
+      conv.last_message.toLowerCase().includes(complianceSearchQuery.toLowerCase()) ||
+      conv.status.toLowerCase().includes(complianceSearchQuery.toLowerCase())
+    ),
+    notes: customerHistory.notes.filter(note =>
+      note.content.toLowerCase().includes(complianceSearchQuery.toLowerCase()) ||
+      note.author.toLowerCase().includes(complianceSearchQuery.toLowerCase())
+    ),
+  } : null;
   const handleAddNote = () => {
     if (!newNote.trim() || !selectedConversation) return;
 
@@ -790,6 +930,17 @@ export default function ChatsScreen() {
                       <Gift size={16} color="#FFFFFF" />
                       <Text style={styles.actionButtonText}>Award</Text>
                     </TouchableOpacity>
+                    
+                    <View style={styles.separator} />
+                    
+                    <Text style={styles.complianceTitle}>Compliance</Text>
+                    <TouchableOpacity 
+                      style={styles.complianceButton}
+                      onPress={handleComplianceClick}
+                    >
+                      <FileText size={16} color="#FFFFFF" />
+                      <Text style={styles.actionButtonText}>View History</Text>
+                    </TouchableOpacity>
 
                     <TouchableOpacity
                       style={styles.complianceButton}
@@ -1059,6 +1210,163 @@ export default function ChatsScreen() {
             </View>
           </View>
         </View>
+      </Modal>
+
+      {/* Compliance Modal */}
+      <Modal
+        visible={showComplianceModal}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setShowComplianceModal(false)}
+      >
+        <SafeAreaView style={styles.complianceModalContainer}>
+          <View style={styles.complianceModalHeader}>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setShowComplianceModal(false)}
+            >
+              <X size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+            
+            <Text style={styles.complianceModalTitle}>
+              Customer Compliance History
+            </Text>
+            
+            <View style={styles.modalPlaceholder} />
+          </View>
+
+          {filteredHistory && (
+            <ScrollView style={styles.complianceModalContent}>
+              {/* Customer Summary */}
+              <View style={styles.complianceSummary}>
+                <Text style={styles.complianceSummaryTitle}>
+                  {selectedConversation?.customer.name}
+                </Text>
+                <View style={styles.complianceStats}>
+                  <View style={styles.complianceStat}>
+                    <Text style={styles.complianceStatValue}>{filteredHistory.total_interactions}</Text>
+                    <Text style={styles.complianceStatLabel}>Total Interactions</Text>
+                  </View>
+                  <View style={styles.complianceStat}>
+                    <Text style={styles.complianceStatValue}>{filteredHistory.satisfaction_score}</Text>
+                    <Text style={styles.complianceStatLabel}>Satisfaction Score</Text>
+                  </View>
+                  <View style={styles.complianceStat}>
+                    <Text style={styles.complianceStatValue}>{filteredHistory.escalations_count}</Text>
+                    <Text style={styles.complianceStatLabel}>Escalations</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Search */}
+              <View style={styles.complianceSearchContainer}>
+                <View style={styles.complianceSearchBar}>
+                  <Search size={16} color="#666666" />
+                  <TextInput
+                    style={styles.complianceSearchInput}
+                    placeholder="Search conversations and notes..."
+                    placeholderTextColor="#666666"
+                    value={complianceSearchQuery}
+                    onChangeText={setComplianceSearchQuery}
+                  />
+                </View>
+              </View>
+
+              {/* Add New Note */}
+              <View style={styles.addNoteSection}>
+                <Text style={styles.addNoteTitle}>Add Compliance Note</Text>
+                <View style={styles.addNoteContainer}>
+                  <TextInput
+                    style={styles.addNoteInput}
+                    placeholder="Enter compliance note..."
+                    placeholderTextColor="#666666"
+                    value={newComplianceNote}
+                    onChangeText={setNewComplianceNote}
+                    multiline
+                    numberOfLines={3}
+                  />
+                  <TouchableOpacity
+                    style={[styles.addNoteButton, !newComplianceNote.trim() && styles.addNoteButtonDisabled]}
+                    onPress={handleAddComplianceNote}
+                    disabled={!newComplianceNote.trim()}
+                  >
+                    <Save size={16} color="#FFFFFF" />
+                    <Text style={styles.addNoteButtonText}>Add Note</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Conversation History */}
+              <View style={styles.complianceSection}>
+                <Text style={styles.complianceSectionTitle}>Conversation History</Text>
+                {filteredHistory.conversations.map((conversation) => (
+                  <View key={conversation.id} style={styles.complianceConversationItem}>
+                    <View style={styles.complianceConversationHeader}>
+                      <Text style={styles.complianceConversationDate}>
+                        {new Date(conversation.date).toLocaleDateString()}
+                      </Text>
+                      <View style={[styles.complianceConversationStatus, { backgroundColor: getStatusColor(conversation.status) }]}>
+                        <Text style={styles.complianceConversationStatusText}>
+                          {conversation.status.toUpperCase()}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={styles.complianceConversationMessage}>
+                      "{conversation.last_message}"
+                    </Text>
+                    <View style={styles.complianceConversationMeta}>
+                      <Text style={styles.complianceConversationMetaText}>
+                        {conversation.messages_count} messages
+                      </Text>
+                      {conversation.resolution_time && (
+                        <Text style={styles.complianceConversationMetaText}>
+                          Resolved in {conversation.resolution_time}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </View>
+
+              {/* Notes History */}
+              <View style={styles.complianceSection}>
+                <Text style={styles.complianceSectionTitle}>Compliance Notes</Text>
+                {filteredHistory.notes.map((note) => (
+                  <View key={note.id} style={styles.complianceNoteItem}>
+                    <View style={styles.complianceNoteHeader}>
+                      <View style={styles.complianceNoteAuthor}>
+                        <UserCheck size={14} color="#5ce1e6" />
+                        <Text style={styles.complianceNoteAuthorText}>{note.author}</Text>
+                      </View>
+                      <Text style={styles.complianceNoteTime}>
+                        {new Date(note.timestamp).toLocaleString()}
+                      </Text>
+                    </View>
+                    <Text style={styles.complianceNoteContent}>{note.content}</Text>
+                    <View style={styles.complianceNoteFooter}>
+                      <View style={[styles.complianceNoteType, { backgroundColor: 
+                        note.type === 'note' ? '#3498DB' :
+                        note.type === 'status_change' ? '#F39C12' :
+                        note.type === 'escalation' ? '#E74C3C' : '#27AE60'
+                      }]}>
+                        <Text style={styles.complianceNoteTypeText}>
+                          {note.type.replace('_', ' ').toUpperCase()}
+                        </Text>
+                      </View>
+                      {note.metadata && (
+                        <Text style={styles.complianceNoteMetadata}>
+                          {note.metadata.old_status && note.metadata.new_status && 
+                            `${note.metadata.old_status} → ${note.metadata.new_status}`}
+                          {note.metadata.reason && `Reason: ${note.metadata.reason}`}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+          )}
+        </SafeAreaView>
       </Modal>
     </SafeAreaView>
     </>
@@ -1511,6 +1819,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  separator: {
+    height: 1,
+    backgroundColor: '#3A3A3A',
+    marginVertical: 16,
+  },
+  complianceTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 12,
+  },
+  complianceButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#8E44AD',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
   complianceButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1890,5 +2219,239 @@ const styles = StyleSheet.create({
     color: '#666666',
     textAlign: 'center',
     lineHeight: 20,
+  },
+  // Compliance Modal Styles
+  complianceModalContainer: {
+    flex: 1,
+    backgroundColor: '#0A0A0A',
+  },
+  complianceModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#1A1A1A',
+    borderBottomWidth: 1,
+    borderBottomColor: '#2A2A2A',
+  },
+  complianceModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    flex: 1,
+  },
+  modalPlaceholder: {
+    width: 40,
+  },
+  complianceModalContent: {
+    flex: 1,
+    padding: 20,
+  },
+  complianceSummary: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  complianceSummaryTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  complianceStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  complianceStat: {
+    alignItems: 'center',
+  },
+  complianceStatValue: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#5ce1e6',
+    marginBottom: 4,
+  },
+  complianceStatLabel: {
+    fontSize: 12,
+    color: '#CCCCCC',
+    textAlign: 'center',
+  },
+  complianceSearchContainer: {
+    marginBottom: 20,
+  },
+  complianceSearchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1A1A1A',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  complianceSearchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#FFFFFF',
+  },
+  addNoteSection: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  addNoteTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 12,
+  },
+  addNoteContainer: {
+    gap: 12,
+  },
+  addNoteInput: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#3A3A3A',
+    textAlignVertical: 'top',
+    minHeight: 80,
+  },
+  addNoteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#5ce1e6',
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  addNoteButtonDisabled: {
+    backgroundColor: '#3A3A3A',
+    opacity: 0.5,
+  },
+  addNoteButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  complianceSection: {
+    marginBottom: 24,
+  },
+  complianceSectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 16,
+  },
+  complianceConversationItem: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  complianceConversationHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  complianceConversationDate: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  complianceConversationStatus: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  complianceConversationStatusText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  complianceConversationMessage: {
+    fontSize: 14,
+    color: '#CCCCCC',
+    fontStyle: 'italic',
+    marginBottom: 8,
+  },
+  complianceConversationMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  complianceConversationMetaText: {
+    fontSize: 12,
+    color: '#666666',
+  },
+  complianceNoteItem: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  complianceNoteHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  complianceNoteAuthor: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  complianceNoteAuthorText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#5ce1e6',
+  },
+  complianceNoteTime: {
+    fontSize: 12,
+    color: '#666666',
+  },
+  complianceNoteContent: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  complianceNoteFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  complianceNoteType: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  complianceNoteTypeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  complianceNoteMetadata: {
+    fontSize: 12,
+    color: '#666666',
+    fontStyle: 'italic',
   },
 });
