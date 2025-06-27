@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, Platform, Image } from 'react-native';
 import { Stack, useRouter, usePathname } from 'expo-router';
-import { ChartBar as BarChart3, MessageCircle, TriangleAlert as AlertTriangle, Settings, Building2, LogOut } from 'lucide-react-native';
+import { ChartBar as BarChart3, MessageCircle, TriangleAlert as AlertTriangle, Settings, Building2, LogOut, ShoppingBag } from 'lucide-react-native';
 import { useCompanyAuth, CompanyAuthProvider } from '@/contexts/CompanyAuthContext';
 
 function StarshipTabBar() {
@@ -17,6 +17,7 @@ function StarshipTabBar() {
   const tabs = [
     { name: 'chats', label: 'Chats', icon: MessageCircle },
     { name: 'posts', label: 'Posts', icon: AlertTriangle },
+    { name: 'sales', label: 'Sales', icon: ShoppingBag },
     { name: 'marketing', label: 'Marketing', icon: BarChart3 },
     { name: 'reports', label: 'Reports', icon: BarChart3 },
     { name: 'settings', label: 'Settings', icon: Settings },
