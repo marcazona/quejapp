@@ -634,7 +634,7 @@ export default function ChatsScreen() {
                   </View>
 
                   <View style={styles.customerActions}>
-                    <Text style={styles.actionsTitle}>Award Loyalty Points</Text>
+                    <Text style={styles.actionsTitle}>Fidelity/Retention</Text>
                     
                     <View style={styles.quickActions}>
                       <TouchableOpacity
