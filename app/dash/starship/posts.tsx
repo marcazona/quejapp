@@ -7,7 +7,8 @@ import {
   FlatList,
   TextInput,
   SafeAreaView,
-  StatusBar,
+ ]
+ StatusBar,
   PanResponder,
   Dimensions,
   Alert,
