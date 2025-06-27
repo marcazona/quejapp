@@ -15,7 +15,7 @@ import {
   FlatList,
   Switch,
   Dimensions,
-  ActivityIndicator,
+import { ShoppingBag, Search, Filter, Plus, Edit, Trash2, Tag, DollarSign, Package, ArrowUpRight, ShoppingCart, Clock, Calendar, ChevronDown, X, Save, Camera, Grid, List, Star, Heart, Eye, MessageCircle, Share, Zap } from 'lucide-react-native';
 } from 'react-native';
 import { router } from 'expo-router';
 import { ShoppingBag, Plus, Search, Filter, Tag, DollarSign, Pencil, Trash2, Eye, Share2, MessageCircle, ChevronRight, X, Save, Camera, Package, Briefcase, ChartBar as BarChart4, Clock, ArrowUpRight, Megaphone, Zap, Grid2x2 as Grid, ArrowUp, ArrowDown, CircleCheck as CheckCircle, TriangleAlert as AlertTriangle } from 'lucide-react-native';
@@ -1090,73 +1090,6 @@ const SalesScreen = () => {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1A1A1A" />
-      
-      {/* Header */}
-      <View style={[styles.headerSection, { marginTop: 60 }]}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.pageTitle}>Sales Dashboard</Text>
-          <Text style={styles.pageSubtitle}>
-            Manage your products, services and orders
-          </Text>
-        </View>
-        
-        <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.headerAction}>
-            <BarChart4 size={20} color="#5ce1e6" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Tabs */}
-      <View style={styles.tabsContainer}>
-        <TouchableOpacity
-          style={[styles.tabButton, activeTab === 'products' && styles.activeTabButton]}
-          onPress={() => setActiveTab('products')}
-        >
-          <Package size={18} color={activeTab === 'products' ? '#5ce1e6' : '#666666'} />
-          <Text style={[styles.tabButtonText, activeTab === 'products' && styles.activeTabButtonText]}>
-            Products & Services
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.tabButton, activeTab === 'orders' && styles.activeTabButton]}
-          onPress={() => setActiveTab('orders')}
-        >
-          <ShoppingBag size={18} color={activeTab === 'orders' ? '#5ce1e6' : '#666666'} />
-          <Text style={[styles.tabButtonText, activeTab === 'orders' && styles.activeTabButtonText]}>
-            Orders
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.tabButton, activeTab === 'promotions' && styles.activeTabButton]}
-          onPress={() => setActiveTab('promotions')}
-        >
-          <Megaphone size={18} color={activeTab === 'promotions' ? '#5ce1e6' : '#666666'} />
-          <Text style={[styles.tabButtonText, activeTab === 'promotions' && styles.activeTabButtonText]}>
-            Promotions
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Tab Content */}
-      {activeTab === 'products' && renderProductsTab()}
-      {activeTab === 'orders' && renderOrdersTab()}
-      {activeTab === 'promotions' && renderPromotionsTab()}
-
-      {/* Add Product Modal */}
-      <Modal
-        visible={showAddModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowAddModal(false)}
-      >
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setShowAddModal(false)}>
-              <X size={24} color="#666666" />
-            </TouchableOpacity>
             <Text style={styles.modalTitle}>
               Add {newProduct.type === 'service' ? 'Service' : 'Product'}
             </Text>
@@ -1638,55 +1571,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0A0A0A',
-  },
-  headerSection: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-  },
-  headerLeft: {
-    flex: 1,
-  },
-  pageTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 4,
-  },
-  pageSubtitle: {
-    fontSize: 16,
-    color: '#CCCCCC',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  headerAction: {
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: '#2A2A2A',
-  },
-  tabsContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#1A1A1A',
-    marginHorizontal: 20,
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 20,
-  },
-  tabButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 6,
-  },
-  activeTabButton: {
-    backgroundColor: '#2A2A2A',
   },
   tabButtonText: {
     fontSize: 14,
