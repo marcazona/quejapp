@@ -15,10 +15,10 @@ import {
   FlatList,
   Switch,
   Dimensions,
-import { ShoppingBag, Search, Filter, Plus, CreditCard as Edit, Trash2, Tag, DollarSign, Package, ArrowUpRight, ShoppingCart, Clock, Calendar, ChevronDown, X, Save, Camera, Grid2x2 as Grid, List, Star, Heart, Eye, MessageCircle, Share, Zap } from 'lucide-react-native';
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
-import { ShoppingBag, Plus, Search, Filter, Tag, DollarSign, Pencil, Trash2, Eye, Share2, MessageCircle, ChevronRight, X, Save, Camera, Package, Briefcase, ChartBar as BarChart4, Clock, ArrowUpRight, Megaphone, Zap, Grid2x2 as Grid, ArrowUp, ArrowDown, CircleCheck as CheckCircle, TriangleAlert as AlertTriangle } from 'lucide-react-native';
+import { ShoppingBag, Search, Filter, Plus, Trash2, Tag, DollarSign, Package, ArrowUpRight, Clock, X, Save, Camera, Grid2x2 as Grid, Eye, MessageCircle, Share, Zap, Pencil, Share2, ChevronRight, Briefcase, ArrowUp, ArrowDown, CircleCheck as CheckCircle, TriangleAlert as AlertTriangle, Megaphone } from 'lucide-react-native';
 import { useCompanyAuth } from '@/contexts/CompanyAuthContext';
 
 const { width } = Dimensions.get('window');
