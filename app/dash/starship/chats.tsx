@@ -548,7 +548,7 @@ export default function ChatsScreen() {
                 <View style={styles.customerCard}>
                   <View style={styles.customerCardHeader}>
                     <View style={styles.customerCardAvatar}>
-                      {selectedConversation.customer.avatar ? (
+                      {selectedConversation.customer.avatar && selectedConversation.customer.avatar.length > 0 ? (
                         <Image 
                           source={{ uri: selectedConversation.customer.avatar }} 
                           style={styles.customerCardAvatarImage} 
