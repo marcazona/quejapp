@@ -13,7 +13,7 @@ import {
   Alert,
 } from 'react-native';
 import { router } from 'expo-router';
-import { ArrowLeft, Building2, Mail, Phone, Globe, MapPin, Bell, Shield, Users, CreditCard, Settings as SettingsIcon, Save, CreditCard as Edit3, Key, Trash2, LogOut } from 'lucide-react-native';
+import { ArrowLeft, Building2, Mail, Phone, Globe, MapPin, Bell, Shield, Users, CreditCard, Settings as SettingsIcon, Save, Pencil, Key, Trash2, LogOut } from 'lucide-react-native';
 import { useCompanyAuth } from '@/contexts/CompanyAuthContext';
 
 interface CompanySettings {
@@ -135,7 +135,7 @@ const SettingsContent = () => {
           style={styles.editButton}
           onPress={() => setIsEditing(!isEditing)}
         >
-          <Edit3 size={16} color="#5ce1e6" />
+          <Pencil size={16} color="#5ce1e6" />
           <Text style={styles.editButtonText}>
             {isEditing ? 'Cancel' : 'Edit'}
           </Text>
