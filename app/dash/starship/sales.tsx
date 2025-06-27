@@ -18,7 +18,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
-import { ShoppingBag, Search, Filter, Plus, Trash2, Tag, DollarSign, Package, ArrowUpRight, Clock, X, Save, Camera, Grid2x2 as Grid, Eye, MessageCircle, Share, Zap, Pencil, Share2, ChevronRight, Briefcase, ArrowUp, ArrowDown, CircleCheck as CheckCircle, TriangleAlert as AlertTriangle, Megaphone } from 'lucide-react-native';
+import { ShoppingBag, Search, Filter, Plus, Trash2, Tag, DollarSign, Package, ArrowUpRight, Clock, X, Save, Camera, Grid2x2 as Grid, Eye, MessageCircle, Share, Zap, Pencil, Share2, ChevronRight, Briefcase, ArrowUp, ArrowDown, CircleCheck as CheckCircle, TriangleAlert as AlertTriangle, Megaphone, ArrowLeft } from 'lucide-react-native';
 import { useCompanyAuth } from '@/contexts/CompanyAuthContext';
 
 const { width } = Dimensions.get('window');
@@ -650,10 +650,6 @@ const SalesScreen = () => {
           <Text style={[
             styles.categoryChipText,
             selectedCategory === null && styles.categoryChipTextActive
-        <View style={styles.modalHeader}>
-          <TouchableOpacity onPress={() => setShowAddModal(false)}>
-            <X size={24} color="#666666" />
-          </TouchableOpacity>
           ]}>
             All
           </Text>
@@ -1094,6 +1090,81 @@ const SalesScreen = () => {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1A1A1A" />
+      
+      {/* Header */}
+      <SafeAreaView style={styles.header}>
+        <View style={styles.headerContent}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <ArrowLeft size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Sales & Products</Text>
+          <View style={styles.headerRight}>
+            <TouchableOpacity style={styles.headerButton}>
+              <Search size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        </View>
+        
+        {/* Tab Navigation */}
+        <View style={styles.tabNavigation}>
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'products' && styles.activeTabButton]}
+            onPress={() => setActiveTab('products')}
+          >
+            <Package size={20} color={activeTab === 'products' ? '#5ce1e6' : '#666666'} />
+            <Text style={[
+              styles.tabButtonText,
+              activeTab === 'products' && styles.activeTabButtonText
+            ]}>
+              Products
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'orders' && styles.activeTabButton]}
+            onPress={() => setActiveTab('orders')}
+          >
+            <ShoppingBag size={20} color={activeTab === 'orders' ? '#5ce1e6' : '#666666'} />
+            <Text style={[
+              styles.tabButtonText,
+              activeTab === 'orders' && styles.activeTabButtonText
+            ]}>
+              Orders
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'promotions' && styles.activeTabButton]}
+            onPress={() => setActiveTab('promotions')}
+          >
+            <Tag size={20} color={activeTab === 'promotions' ? '#5ce1e6' : '#666666'} />
+            <Text style={[
+              styles.tabButtonText,
+              activeTab === 'promotions' && styles.activeTabButtonText
+            ]}>
+              Promotions
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+
+      {/* Tab Content */}
+      {activeTab === 'products' && renderProductsTab()}
+      {activeTab === 'orders' && renderOrdersTab()}
+      {activeTab === 'promotions' && renderPromotionsTab()}
+
+      {/* Add Product Modal */}
+      <Modal
+        visible={showAddModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowAddModal(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowAddModal(false)}>
+              <X size={24} color="#666666" />
+            </TouchableOpacity>
             <Text style={styles.modalTitle}>
               Add {newProduct.type === 'service' ? 'Service' : 'Product'}
             </Text>
@@ -1576,13 +1647,62 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0A0A0A',
   },
+  header: {
+    backgroundColor: '#1A1A1A',
+    borderBottomWidth: 1,
+    borderBottomColor: '#2A2A2A',
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  headerButton: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: 8,
+    padding: 8,
+  },
+  tabNavigation: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    gap: 12,
+  },
+  tabButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2A2A2A',
+    borderRadius: 8,
+    paddingVertical: 12,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#3A3A3A',
+  },
+  activeTabButton: {
+    backgroundColor: '#5ce1e6',
+    borderColor: '#5ce1e6',
+  },
   tabButtonText: {
     fontSize: 14,
     fontWeight: '600',
     color: '#666666',
   },
   activeTabButtonText: {
-    color: '#5ce1e6',
+    color: '#FFFFFF',
   },
   tabContent: {
     flex: 1,
