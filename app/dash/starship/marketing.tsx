@@ -15,7 +15,7 @@ import {
   Switch,
 } from 'react-native';
 import { router } from 'expo-router';
-import { TrendingUp, TrendingDown, Eye, Users, MessageCircle, Star, ChartBar as BarChart3, ChartPie as PieChart, Calendar, Download, Filter, RefreshCw, Clock, Target, Award, DollarSign, TriangleAlert as AlertTriangle, CreditCard as Edit, Save, X, Plus, Building2, Globe, Phone, Mail, MapPin, Camera, Zap, Crown, Sparkles, Shield } from 'lucide-react-native';
+import { TrendingUp, TrendingDown, Eye, Users, MessageCircle, Star, ChartBar as BarChart3, ChartPie as PieChart, Calendar, Download, Filter, RefreshCw, Clock, Target, Award, DollarSign, TriangleAlert as AlertTriangle, CreditCard as Edit, Save, X, Plus, Building2, Globe, Phone, Mail, MapPin, Camera, Zap, Crown, Sparkles, Shield, Grid3x3 as Grid, Search, ShoppingBag, Heart, Megaphone, TrendingUp as Trending } from 'lucide-react-native';
 import { useCompanyAuth } from '@/contexts/CompanyAuthContext';
 
 const { width } = Dimensions.get('window');
@@ -43,6 +43,18 @@ interface CompanyBanner {
 
 interface VisibilityBoost {
   id: string;
+  type: 'grid_squares' | 'featured_industry' | 'smart_ads' | 'smart_marketing' | 'smart_sales' | 'verified_badge' | 'premium_package';
+  name: string;
+  description: string;
+  duration: string;
+  price: number;
+  benefits: string[];
+  isActive: boolean;
+  category: 'visibility' | 'marketing' | 'sales' | 'premium';
+}
+
+interface LegacyVisibilityBoost {
+  id: string;
   type: 'featured' | 'priority' | 'highlighted' | 'premium';
   name: string;
   description: string;
@@ -50,6 +62,7 @@ interface VisibilityBoost {
   price: number;
   benefits: string[];
   isActive: boolean;
+  category?: string;
 }
 
 const MarketingContent = () => {
@@ -126,43 +139,80 @@ const MarketingContent = () => {
   const [visibilityBoosts] = useState<VisibilityBoost[]>([
     {
       id: '1',
-      type: 'featured',
-      name: 'Featured Listing',
-      description: 'Appear at the top of search results and category pages',
+      type: 'grid_squares',
+      name: 'Grid Squares Visibility',
+      description: 'Show your company in prominent grid squares across the platform for maximum exposure',
       duration: '30 days',
-      price: 99,
-      benefits: ['Top search placement', 'Featured badge', '3x more visibility'],
+      price: 149,
+      benefits: ['Premium grid placement', 'Enhanced visual presence', '5x more visibility', 'Priority positioning'],
       isActive: false,
+      category: 'visibility',
     },
     {
       id: '2',
-      type: 'priority',
-      name: 'Priority Support Badge',
-      description: 'Show customers you provide priority customer service',
-      duration: '90 days',
-      price: 149,
-      benefits: ['Priority badge', 'Faster response guarantee', 'Customer trust boost'],
+      type: 'featured_industry',
+      name: 'Featured Industry Listing',
+      description: 'Appear at the top of your industry category with premium placement',
+      duration: '60 days',
+      price: 199,
+      benefits: ['Top industry placement', 'Industry leader badge', 'Category dominance', 'Increased credibility'],
       isActive: true,
+      category: 'visibility',
     },
     {
       id: '3',
-      type: 'highlighted',
-      name: 'Highlighted Profile',
-      description: 'Stand out with a premium highlighted profile design',
-      duration: '60 days',
-      price: 79,
-      benefits: ['Premium design', 'Color highlights', 'Enhanced visibility'],
+      type: 'smart_ads',
+      name: 'Smart Ads Targeting',
+      description: 'Show your company as a relevant option for customers with similar claims and industry needs',
+      duration: '45 days',
+      price: 299,
+      benefits: ['AI-powered targeting', 'Competitor claim insights', 'Relevant customer matching', 'Higher conversion rates'],
       isActive: false,
+      category: 'marketing',
     },
     {
       id: '4',
-      type: 'premium',
-      name: 'Premium Package',
-      description: 'Complete visibility package with all premium features',
-      duration: '365 days',
-      price: 499,
-      benefits: ['All features included', 'Analytics dashboard', 'Priority support', 'Custom branding'],
+      type: 'smart_marketing',
+      name: 'Smart Marketing Suite',
+      description: 'Send special offers and communicate with high-value customers monitoring your page',
+      duration: '90 days',
+      price: 399,
+      benefits: ['Automated customer outreach', 'Personalized offers', 'High-value customer targeting', 'Engagement analytics'],
       isActive: false,
+      category: 'marketing',
+    },
+    {
+      id: '5',
+      type: 'smart_sales',
+      name: 'Smart Sales Boost',
+      description: 'Highlight your products/services for customers searching in the offers page',
+      duration: '30 days',
+      price: 249,
+      benefits: ['Search result highlighting', 'Offer page priority', 'Product/service spotlights', 'Sales conversion boost'],
+      isActive: false,
+      category: 'sales',
+    },
+    {
+      id: '6',
+      type: 'verified_badge',
+      name: 'Verified Business Badge',
+      description: 'Show that your company uses quejapp and cares about customers with official verification',
+      duration: '365 days',
+      price: 99,
+      benefits: ['Official verification badge', 'Customer trust indicator', 'Platform endorsement', 'Credibility boost'],
+      isActive: true,
+      category: 'premium',
+    },
+    {
+      id: '7',
+      type: 'premium_package',
+      name: 'Premium Package',
+      description: 'All features included - complete visibility and marketing solution',
+      duration: '365 days',
+      price: 999,
+      benefits: ['All visibility features', 'Complete marketing suite', 'Priority support', 'Custom branding', 'Advanced analytics', 'Dedicated account manager'],
+      isActive: false,
+      category: 'premium',
     },
   ]);
 
@@ -239,6 +289,7 @@ const MarketingContent = () => {
     Alert.alert('Success', 'Banner created successfully!');
   };
 
+  // Fixed handleDeleteBanner function
   const handleDeleteBanner = (bannerId: string) => {
     Alert.alert(
       'Delete Banner',
@@ -250,12 +301,12 @@ const MarketingContent = () => {
           style: 'destructive',
           onPress: () => {
             setBanners(banners.filter(banner => banner.id !== bannerId));
-            // Banner deleted successfully - no need for additional alert
           },
         },
       ]
     );
   };
+
   const handlePurchaseBoost = (boost: VisibilityBoost) => {
     Alert.alert(
       'Purchase Visibility Boost',
@@ -270,6 +321,19 @@ const MarketingContent = () => {
         },
       ]
     );
+  };
+
+  const getBoostIcon = (type: string) => {
+    switch (type) {
+      case 'grid_squares': return <Grid size={24} color="#3498DB" />;
+      case 'featured_industry': return <Building2 size={24} color="#E67E22" />;
+      case 'smart_ads': return <Target size={24} color="#E74C3C" />;
+      case 'smart_marketing': return <Megaphone size={24} color="#9B59B6" />;
+      case 'smart_sales': return <ShoppingBag size={24} color="#27AE60" />;
+      case 'verified_badge': return <Shield size={24} color="#F39C12" />;
+      case 'premium_package': return <Crown size={24} color="#8E44AD" />;
+      default: return <Star size={24} color="#666666" />;
+    }
   };
 
   const TabButton = ({ 
@@ -538,20 +602,37 @@ const MarketingContent = () => {
   const renderVisibilityTab = () => (
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
       <View style={styles.section}>
+        <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Visibility Boosts</Text>
+        <View style={styles.packageInfo}>
+          <Crown size={16} color="#F39C12" />
+          <Text style={styles.packageText}>Premium Available</Text>
+        </View>
+        </View>
         <Text style={styles.sectionDescription}>
-          Increase your company's visibility and attract more customers with our premium features.
+          Increase your company's visibility and attract more customers with our advanced marketing features. Choose individual boosts or get everything with our Premium Package.
         </Text>
+
+        {/* Category Filters */}
+        <View style={styles.categoryFilters}>
+          {['all', 'visibility', 'marketing', 'sales', 'premium'].map((category) => (
+            <TouchableOpacity
+              key={category}
+              style={[styles.categoryFilter, styles.categoryFilterActive]}
+            >
+              <Text style={[styles.categoryFilterText, styles.categoryFilterTextActive]}>
+                {category.charAt(0).toUpperCase() + category.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
         <View style={styles.boostsGrid}>
           {visibilityBoosts.map((boost) => (
             <View key={boost.id} style={[styles.boostCard, boost.isActive && styles.boostCardActive]}>
               <View style={styles.boostHeader}>
                 <View style={styles.boostIcon}>
-                  {boost.type === 'featured' && <Star size={24} color="#F39C12" />}
-                  {boost.type === 'priority' && <Zap size={24} color="#E74C3C" />}
-                  {boost.type === 'highlighted' && <Sparkles size={24} color="#9B59B6" />}
-                  {boost.type === 'premium' && <Crown size={24} color="#27AE60" />}
+                  {getBoostIcon(boost.type)}
                 </View>
                 <View style={styles.boostInfo}>
                   <Text style={styles.boostName}>{boost.name}</Text>
@@ -559,6 +640,9 @@ const MarketingContent = () => {
                 </View>
                 <View style={styles.boostPrice}>
                   <Text style={styles.boostPriceText}>${boost.price}</Text>
+                  {boost.type === 'premium_package' && (
+                    <Text style={styles.bestValueText}>Best Value</Text>
+                  )}
                 </View>
               </View>
 
@@ -1248,6 +1332,52 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   boostButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  packageInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#2A2A2A',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  packageText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#F39C12',
+  },
+  bestValueText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#27AE60',
+    marginTop: 2,
+  },
+  categoryFilters: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 20,
+    flexWrap: 'wrap',
+  },
+  categoryFilter: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#2A2A2A',
+    borderWidth: 1,
+    borderColor: '#3A3A3A',
+  },
+  categoryFilterActive: {
+    backgroundColor: '#5ce1e6',
+    borderColor: '#5ce1e6',
+  },
+  categoryFilterText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#CCCCCC',
+  },
+  categoryFilterTextActive: {
     color: '#FFFFFF',
   },
   analyticsGrid: {
