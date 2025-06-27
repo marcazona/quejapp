@@ -1590,7 +1590,9 @@ const styles = StyleSheet.create({
   chartPlaceholderText: {
     fontSize: 14,
     color: '#666666',
-@@ .. @@
+    marginTop: 12,
+    textAlign: 'center',
+  },
   visibilityHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
