@@ -90,6 +90,44 @@ interface Company {
   name: string;
 }
 
+interface ComplianceNote {
+  id: string;
+  customer_id: string;
+  author: string;
+  content: string;
+  type: 'note' | 'status_change' | 'escalation' | 'resolution';
+  timestamp: string;
+  metadata?: {
+    old_status?: string;
+    new_status?: string;
+    reason?: string;
+  };
+}
+
+interface CustomerHistory {
+  customer_id: string;
+  conversations: Array<{
+    id: string;
+    date: string;
+    status: string;
+    messages_count: number;
+    last_message: string;
+    resolution_time?: string;
+  }>;
+  posts: Array<{
+    id: string;
+    date: string;
+    type: string;
+    title: string;
+    status: string;
+    resolution_time?: string;
+  }>;
+  notes: ComplianceNote[];
+  total_interactions: number;
+  satisfaction_score: number;
+  escalations_count: number;
+}
+
 export default function PostsScreen() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
@@ -103,6 +141,9 @@ export default function PostsScreen() {
   const [showPointsModal, setShowPointsModal] = useState(false);
   const [customPointsAmount, setCustomPointsAmount] = useState('');
   const [showComplianceModal, setShowComplianceModal] = useState(false);
+  const [customerHistory, setCustomerHistory] = useState<CustomerHistory | null>(null);
+  const [complianceSearchQuery, setComplianceSearchQuery] = useState('');
+  const [newComplianceNote, setNewComplianceNote] = useState('');
   const [newNote, setNewNote] = useState('');
   const [complianceHistory, setComplianceHistory] = useState<ComplianceEntry[]>([]);
 
@@ -321,6 +362,136 @@ export default function PostsScreen() {
 
     Alert.alert('Success', `Post status updated to ${newStatus}`);
   };
+
+  const handleComplianceClick = async () => {
+    if (!selectedPost) return;
+    
+    // Mock customer history data
+    const mockHistory: CustomerHistory = {
+      customer_id: selectedPost.customer.id,
+      conversations: [
+        {
+          id: 'conv_1',
+          date: '2024-01-15',
+          status: 'resolved',
+          messages_count: 12,
+          last_message: 'Thank you for your help!',
+          resolution_time: '2h 15m',
+        },
+        {
+          id: 'conv_2',
+          date: '2024-01-10',
+          status: 'resolved',
+          messages_count: 8,
+          last_message: 'Issue resolved successfully.',
+          resolution_time: '1h 45m',
+        },
+      ],
+      posts: [
+        {
+          id: 'post_1',
+          date: '2024-01-20',
+          type: 'review',
+          title: 'Great service experience',
+          status: 'published',
+          resolution_time: '30m',
+        },
+        {
+          id: 'post_2',
+          date: '2024-01-18',
+          type: 'claim',
+          title: 'Product quality issue',
+          status: 'resolved',
+          resolution_time: '4h 20m',
+        },
+        {
+          id: 'post_3',
+          date: '2024-01-15',
+          type: 'question',
+          title: 'How to use premium features?',
+          status: 'answered',
+          resolution_time: '1h 10m',
+        },
+      ],
+      notes: [
+        {
+          id: 'note_1',
+          customer_id: selectedPost.customer.id,
+          author: 'John Smith',
+          content: 'Customer is very engaged and provides detailed feedback. High-value customer.',
+          type: 'note',
+          timestamp: '2024-01-20T14:30:00Z',
+        },
+        {
+          id: 'note_2',
+          customer_id: selectedPost.customer.id,
+          author: 'Sarah Johnson',
+          content: 'Escalated product quality claim to quality assurance team.',
+          type: 'escalation',
+          timestamp: '2024-01-18T09:15:00Z',
+          metadata: {
+            reason: 'Product quality concern',
+          },
+        },
+        {
+          id: 'note_3',
+          customer_id: selectedPost.customer.id,
+          author: 'Mike Davis',
+          content: 'Post status changed from pending to resolved after providing solution.',
+          type: 'status_change',
+          timestamp: '2024-01-18T16:45:00Z',
+          metadata: {
+            old_status: 'pending',
+            new_status: 'resolved',
+          },
+        },
+      ],
+      total_interactions: 5,
+      satisfaction_score: 4.6,
+      escalations_count: 1,
+    };
+    
+    setCustomerHistory(mockHistory);
+    setShowComplianceModal(true);
+  };
+
+  const handleAddComplianceNote = () => {
+    if (!newComplianceNote.trim() || !customerHistory) return;
+    
+    const newNote: ComplianceNote = {
+      id: `note_${Date.now()}`,
+      customer_id: customerHistory.customer_id,
+      author: 'Current User',
+      content: newComplianceNote.trim(),
+      type: 'note',
+      timestamp: new Date().toISOString(),
+    };
+    
+    setCustomerHistory(prev => prev ? {
+      ...prev,
+      notes: [newNote, ...prev.notes],
+    } : null);
+    
+    setNewComplianceNote('');
+    Alert.alert('Success', 'Compliance note added successfully');
+  };
+
+  const filteredHistory = customerHistory ? {
+    ...customerHistory,
+    conversations: customerHistory.conversations.filter(conv =>
+      conv.last_message.toLowerCase().includes(complianceSearchQuery.toLowerCase()) ||
+      conv.status.toLowerCase().includes(complianceSearchQuery.toLowerCase())
+    ),
+    posts: customerHistory.posts.filter(post =>
+      post.title.toLowerCase().includes(complianceSearchQuery.toLowerCase()) ||
+      post.type.toLowerCase().includes(complianceSearchQuery.toLowerCase()) ||
+      post.status.toLowerCase().includes(complianceSearchQuery.toLowerCase())
+    ),
+    notes: customerHistory.notes.filter(note =>
+      note.content.toLowerCase().includes(complianceSearchQuery.toLowerCase()) ||
+      note.author.toLowerCase().includes(complianceSearchQuery.toLowerCase())
+    ),
+  } : null;
 
   const handleAwardCoins = (customerId: string, amount: number) => {
     if (!selectedPost) return;
@@ -847,7 +1018,24 @@ export default function PostsScreen() {
                         {selectedPost.customer.loyaltyPoints}
                       </Text>
                     </View>
+                    <View style={styles.statItem}>
+                      <Text style={styles.statLabel}>Member Since</Text>
+                      <Text style={styles.statValue}>
+                        {new Date(selectedPost.customer.joinDate).toLocaleDateString()}
+                      </Text>
+                    </View>
                   </View>
+                  
+                  <View style={styles.separator} />
+                  
+                  <Text style={styles.complianceTitle}>Compliance</Text>
+                  <TouchableOpacity 
+                    style={styles.complianceButton}
+                    onPress={handleComplianceClick}
+                  >
+                    <FileText size={16} color="#FFFFFF" />
+                    <Text style={styles.actionButtonText}>View History</Text>
+                  </TouchableOpacity>
 
                   <View style={styles.customerActions}>
                     <View style={styles.actionsSeparator} />
@@ -889,14 +1077,6 @@ export default function PostsScreen() {
                     >
                       <Gift size={16} color="#FFFFFF" />
                       <Text style={styles.actionButtonText}>Award</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.complianceButton}
-                      onPress={() => setShowComplianceModal(true)}
-                    >
-                      <FileText size={16} color="#FFFFFF" />
-                      <Text style={styles.complianceButtonText}>Compliance</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -975,115 +1155,202 @@ export default function PostsScreen() {
         </View>
       </Modal>
 
-      {/* Compliance Modal */}
-      <Modal
-        visible={showComplianceModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowComplianceModal(false)}
-      >
-        <View style={styles.complianceModalOverlay}>
-          <View style={styles.complianceModal}>
-            <View style={styles.complianceModalHeader}>
-              <Text style={styles.complianceModalTitle}>
-                Compliance History - {selectedPost?.customer.name}
-              </Text>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => setShowComplianceModal(false)}
-              >
-                <X size={20} color="#666666" />
-              </TouchableOpacity>
-            </View>
+    {/* Compliance Modal */}
+    <Modal
+      visible={showComplianceModal}
+      animationType="slide"
+      presentationStyle="fullScreen"
+      onRequestClose={() => setShowComplianceModal(false)}
+    >
+      <SafeAreaView style={styles.complianceModalContainer}>
+        <View style={styles.complianceModalHeader}>
+          <TouchableOpacity
+            style={styles.modalCloseButton}
+            onPress={() => setShowComplianceModal(false)}
+          >
+            <X size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          
+          <Text style={styles.complianceModalTitle}>
+            Customer Compliance History
+          </Text>
+          
+          <View style={styles.modalPlaceholder} />
+        </View>
 
-            <View style={styles.complianceContent}>
-              {/* Add Note Section */}
-              <View style={styles.addNoteSection}>
-                <Text style={styles.addNoteTitle}>Add New Note</Text>
-                <View style={styles.noteInputContainer}>
-                  <TextInput
-                    style={styles.noteInput}
-                    value={newNote}
-                    onChangeText={setNewNote}
-                    placeholder="Enter compliance note..."
-                    placeholderTextColor="#666666"
-                    multiline
-                    numberOfLines={3}
-                    maxLength={500}
-                  />
-                  <TouchableOpacity
-                    style={[styles.addNoteButton, !newNote.trim() && styles.addNoteButtonDisabled]}
-                    onPress={handleAddNote}
-                    disabled={!newNote.trim()}
-                  >
-                    <Save size={16} color="#FFFFFF" />
-                    <Text style={styles.addNoteButtonText}>Add Note</Text>
-                  </TouchableOpacity>
+        {filteredHistory && (
+          <ScrollView style={styles.complianceModalContent}>
+            {/* Customer Summary */}
+            <View style={styles.complianceSummary}>
+              <Text style={styles.complianceSummaryTitle}>
+                {selectedPost?.customer.name}
+              </Text>
+              <View style={styles.complianceStats}>
+                <View style={styles.complianceStat}>
+                  <Text style={styles.complianceStatValue}>{filteredHistory.total_interactions}</Text>
+                  <Text style={styles.complianceStatLabel}>Total Interactions</Text>
+                </View>
+                <View style={styles.complianceStat}>
+                  <Text style={styles.complianceStatValue}>{filteredHistory.satisfaction_score}</Text>
+                  <Text style={styles.complianceStatLabel}>Satisfaction Score</Text>
+                </View>
+                <View style={styles.complianceStat}>
+                  <Text style={styles.complianceStatValue}>{filteredHistory.escalations_count}</Text>
+                  <Text style={styles.complianceStatLabel}>Escalations</Text>
                 </View>
               </View>
+            </View>
 
-              {/* History List */}
-              <View style={styles.historySection}>
-                <Text style={styles.historySectionTitle}>
-                  Interaction History ({complianceHistory.length})
-                </Text>
-                
-                {complianceHistory.length > 0 ? (
-                  <FlatList
-                    data={complianceHistory}
-                    keyExtractor={(item) => item.id}
-                    showsVerticalScrollIndicator={false}
-                    style={styles.historyList}
-                    renderItem={({ item }) => (
-                      <View style={styles.historyItem}>
-                        <View style={styles.historyItemHeader}>
-                          <View style={styles.historyItemLeft}>
-                            {getComplianceIcon(item.type)}
-                            <Text style={styles.historyItemTitle}>{item.title}</Text>
-                          </View>
-                          <Text style={styles.historyItemTime}>
-                            {formatComplianceTime(item.timestamp)}
-                          </Text>
-                        </View>
-                        
-                        <Text style={styles.historyItemDescription}>
-                          {item.description}
-                        </Text>
-                        
-                        <View style={styles.historyItemFooter}>
-                          <Text style={styles.historyItemAuthor}>by {item.author}</Text>
-                          {item.metadata && (
-                            <View style={styles.historyItemMetadata}>
-                              {item.metadata.oldStatus && item.metadata.newStatus && (
-                                <Text style={styles.metadataText}>
-                                  {item.metadata.oldStatus} → {item.metadata.newStatus}
-                                </Text>
-                              )}
-                              {item.metadata.contactMethod && (
-                                <Text style={styles.metadataText}>
-                                  via {item.metadata.contactMethod}
-                                </Text>
-                              )}
-                            </View>
-                          )}
-                        </View>
-                      </View>
-                    )}
-                  />
-                ) : (
-                  <View style={styles.emptyHistory}>
-                    <FileText size={48} color="#666666" />
-                    <Text style={styles.emptyHistoryTitle}>No History Yet</Text>
-                    <Text style={styles.emptyHistoryText}>
-                      Compliance notes and interaction history will appear here
-                    </Text>
-                  </View>
-                )}
+            {/* Search */}
+            <View style={styles.complianceSearchContainer}>
+              <View style={styles.complianceSearchBar}>
+                <Search size={16} color="#666666" />
+                <TextInput
+                  style={styles.complianceSearchInput}
+                  placeholder="Search conversations, posts and notes..."
+                  placeholderTextColor="#666666"
+                  value={complianceSearchQuery}
+                  onChangeText={setComplianceSearchQuery}
+                />
               </View>
             </View>
-          </View>
-        </View>
-      </Modal>
+
+            {/* Add New Note */}
+            <View style={styles.addNoteSection}>
+              <Text style={styles.addNoteTitle}>Add Compliance Note</Text>
+              <View style={styles.addNoteContainer}>
+                <TextInput
+                  style={styles.addNoteInput}
+                  placeholder="Enter compliance note..."
+                  placeholderTextColor="#666666"
+                  value={newComplianceNote}
+                  onChangeText={setNewComplianceNote}
+                  multiline
+                  numberOfLines={3}
+                />
+                <TouchableOpacity
+                  style={[styles.addNoteButton, !newComplianceNote.trim() && styles.addNoteButtonDisabled]}
+                  onPress={handleAddComplianceNote}
+                  disabled={!newComplianceNote.trim()}
+                >
+                  <Save size={16} color="#FFFFFF" />
+                  <Text style={styles.addNoteButtonText}>Add Note</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Posts History */}
+            <View style={styles.complianceSection}>
+              <Text style={styles.complianceSectionTitle}>Posts History</Text>
+              {filteredHistory.posts.map((post) => (
+                <View key={post.id} style={styles.compliancePostItem}>
+                  <View style={styles.compliancePostHeader}>
+                    <Text style={styles.compliancePostDate}>
+                      {new Date(post.date).toLocaleDateString()}
+                    </Text>
+                    <View style={styles.compliancePostBadges}>
+                      <View style={[styles.compliancePostType, { backgroundColor: 
+                        post.type === 'review' ? '#27AE60' :
+                        post.type === 'claim' ? '#E74C3C' :
+                        post.type === 'question' ? '#3498DB' : '#F39C12'
+                      }]}>
+                        <Text style={styles.compliancePostTypeText}>
+                          {post.type.toUpperCase()}
+                        </Text>
+                      </View>
+                      <View style={[styles.compliancePostStatus, { backgroundColor: getStatusColor(post.status) }]}>
+                        <Text style={styles.compliancePostStatusText}>
+                          {post.status.toUpperCase()}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                  <Text style={styles.compliancePostTitle}>
+                    {post.title}
+                  </Text>
+                  <View style={styles.compliancePostMeta}>
+                    {post.resolution_time && (
+                      <Text style={styles.compliancePostMetaText}>
+                        Resolved in {post.resolution_time}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              ))}
+            </View>
+
+            {/* Conversation History */}
+            <View style={styles.complianceSection}>
+              <Text style={styles.complianceSectionTitle}>Conversation History</Text>
+              {filteredHistory.conversations.map((conversation) => (
+                <View key={conversation.id} style={styles.complianceConversationItem}>
+                  <View style={styles.complianceConversationHeader}>
+                    <Text style={styles.complianceConversationDate}>
+                      {new Date(conversation.date).toLocaleDateString()}
+                    </Text>
+                    <View style={[styles.complianceConversationStatus, { backgroundColor: getStatusColor(conversation.status) }]}>
+                      <Text style={styles.complianceConversationStatusText}>
+                        {conversation.status.toUpperCase()}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={styles.complianceConversationMessage}>
+                    "{conversation.last_message}"
+                  </Text>
+                  <View style={styles.complianceConversationMeta}>
+                    <Text style={styles.complianceConversationMetaText}>
+                      {conversation.messages_count} messages
+                    </Text>
+                    {conversation.resolution_time && (
+                      <Text style={styles.complianceConversationMetaText}>
+                        Resolved in {conversation.resolution_time}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              ))}
+            </View>
+
+            {/* Notes History */}
+            <View style={styles.complianceSection}>
+              <Text style={styles.complianceSectionTitle}>Compliance Notes</Text>
+              {filteredHistory.notes.map((note) => (
+                <View key={note.id} style={styles.complianceNoteItem}>
+                  <View style={styles.complianceNoteHeader}>
+                    <View style={styles.complianceNoteAuthor}>
+                      <UserCheck size={14} color="#5ce1e6" />
+                      <Text style={styles.complianceNoteAuthorText}>{note.author}</Text>
+                    </View>
+                    <Text style={styles.complianceNoteTime}>
+                      {new Date(note.timestamp).toLocaleString()}
+                    </Text>
+                  </View>
+                  <Text style={styles.complianceNoteContent}>{note.content}</Text>
+                  <View style={styles.complianceNoteFooter}>
+                    <View style={[styles.complianceNoteType, { backgroundColor: 
+                      note.type === 'note' ? '#3498DB' :
+                      note.type === 'status_change' ? '#F39C12' :
+                      note.type === 'escalation' ? '#E74C3C' : '#27AE60'
+                    }]}>
+                      <Text style={styles.complianceNoteTypeText}>
+                        {note.type.replace('_', ' ').toUpperCase()}
+                      </Text>
+                    </View>
+                    {note.metadata && (
+                      <Text style={styles.complianceNoteMetadata}>
+                        {note.metadata.old_status && note.metadata.new_status && 
+                          `${note.metadata.old_status} → ${note.metadata.new_status}`}
+                        {note.metadata.reason && `Reason: ${note.metadata.reason}`}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+        )}
+      </SafeAreaView>
+    </Modal>
     </SafeAreaView>
   );
 }
@@ -1604,6 +1871,32 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
   },
+  separator: {
+    height: 1,
+    backgroundColor: '#3A3A3A',
+    marginVertical: 16,
+  },
+  complianceTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 12,
+  },
+  complianceButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#8E44AD',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  actionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   customerActions: {
     paddingTop: 16,
     gap: 12,
@@ -1653,10 +1946,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     gap: 8,
   },
-  actionButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
   pointsModal: {
     backgroundColor: '#1A1A1A',
@@ -1677,9 +1972,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#FFFFFF',
-  },
-  modalCloseButton: {
-    padding: 4,
   },
   pointsModalSubtitle: {
     fontSize: 14,
@@ -1745,21 +2037,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  complianceButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#8E44AD',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 8,
-  },
-  complianceButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
   noPostSelected: {
     flex: 1,
     justifyContent: 'center',
@@ -1778,29 +2055,21 @@ const styles = StyleSheet.create({
     color: '#666666',
     textAlign: 'center',
   },
-  // Compliance Modal Styles
-  complianceModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+  modalCloseButton: {
+    padding: 8,
   },
-  complianceModal: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 16,
-    width: '100%',
-    maxWidth: 600,
-    maxHeight: '80%',
-    borderWidth: 1,
-    borderColor: '#2A2A2A',
+  // Compliance Modal Styles
+  complianceModalContainer: {
+    flex: 1,
+    backgroundColor: '#0A0A0A',
   },
   complianceModalHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 20,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#1A1A1A',
     borderBottomWidth: 1,
     borderBottomColor: '#2A2A2A',
   },
@@ -1808,14 +2077,75 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#FFFFFF',
+    textAlign: 'center',
     flex: 1,
   },
-  complianceContent: {
+  modalPlaceholder: {
+    width: 40,
+  },
+  complianceModalContent: {
     flex: 1,
-    padding: 24,
+    padding: 20,
+  },
+  complianceSummary: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  complianceSummaryTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  complianceStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  complianceStat: {
+    alignItems: 'center',
+  },
+  complianceStatValue: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#5ce1e6',
+    marginBottom: 4,
+  },
+  complianceStatLabel: {
+    fontSize: 12,
+    color: '#CCCCCC',
+    textAlign: 'center',
+  },
+  complianceSearchContainer: {
+    marginBottom: 20,
+  },
+  complianceSearchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1A1A1A',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  complianceSearchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#FFFFFF',
   },
   addNoteSection: {
-    marginBottom: 24,
+    backgroundColor: '#1A1A1A',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
   },
   addNoteTitle: {
     fontSize: 16,
@@ -1823,26 +2153,26 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginBottom: 12,
   },
-  noteInputContainer: {
+  addNoteContainer: {
     gap: 12,
   },
-  noteInput: {
+  addNoteInput: {
     backgroundColor: '#2A2A2A',
     borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     fontSize: 14,
     color: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#3A3A3A',
-    minHeight: 80,
     textAlignVertical: 'top',
+    minHeight: 80,
   },
   addNoteButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#8E44AD',
+    backgroundColor: '#5ce1e6',
     paddingVertical: 12,
     borderRadius: 8,
     gap: 8,
@@ -1856,92 +2186,167 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  historySection: {
-    flex: 1,
+  complianceSection: {
+    marginBottom: 24,
   },
-  historySectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+  complianceSectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
     color: '#FFFFFF',
     marginBottom: 16,
   },
-  historyList: {
-    flex: 1,
-  },
-  historyItem: {
-    backgroundColor: '#2A2A2A',
+  compliancePostItem: {
+    backgroundColor: '#1A1A1A',
     borderRadius: 8,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#3A3A3A',
+    borderColor: '#2A2A2A',
   },
-  historyItemHeader: {
+  compliancePostHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
   },
-  historyItemLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flex: 1,
-  },
-  historyItemTitle: {
+  compliancePostDate: {
     fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
   },
-  historyItemTime: {
-    fontSize: 12,
-    color: '#666666',
-  },
-  historyItemDescription: {
-    fontSize: 14,
-    color: '#CCCCCC',
-    lineHeight: 20,
-    marginBottom: 8,
-  },
-  historyItemFooter: {
+  compliancePostBadges: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    gap: 6,
   },
-  historyItemAuthor: {
-    fontSize: 12,
-    color: '#5ce1e6',
-    fontWeight: '500',
-  },
-  historyItemMetadata: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  metadataText: {
-    fontSize: 11,
-    color: '#999999',
-    backgroundColor: '#3A3A3A',
+  compliancePostType: {
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
   },
-  emptyHistory: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyHistoryTitle: {
-    fontSize: 18,
+  compliancePostTypeText: {
+    fontSize: 10,
     fontWeight: '600',
     color: '#FFFFFF',
-    marginTop: 16,
+  },
+  compliancePostStatus: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  compliancePostStatusText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  compliancePostTitle: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '600',
     marginBottom: 8,
   },
-  emptyHistoryText: {
-    fontSize: 14,
+  compliancePostMeta: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  compliancePostMetaText: {
+    fontSize: 12,
     color: '#666666',
-    textAlign: 'center',
+  },
+  complianceConversationItem: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  complianceConversationHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  complianceConversationDate: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  complianceConversationStatus: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  complianceConversationStatusText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  complianceConversationMessage: {
+    fontSize: 14,
+    color: '#CCCCCC',
+    fontStyle: 'italic',
+    marginBottom: 8,
+  },
+  complianceConversationMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  complianceConversationMetaText: {
+    fontSize: 12,
+    color: '#666666',
+  },
+  complianceNoteItem: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  complianceNoteHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  complianceNoteAuthor: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  complianceNoteAuthorText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#5ce1e6',
+  },
+  complianceNoteTime: {
+    fontSize: 12,
+    color: '#666666',
+  },
+  complianceNoteContent: {
+    fontSize: 14,
+    color: '#FFFFFF',
     lineHeight: 20,
+    marginBottom: 12,
+  },
+  complianceNoteFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  complianceNoteType: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  complianceNoteTypeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  complianceNoteMetadata: {
+    fontSize: 12,
+    color: '#666666',
+    fontStyle: 'italic',
   },
 });
