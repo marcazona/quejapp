@@ -21,6 +21,24 @@ import { useCompanyAuth } from '@/contexts/CompanyAuthContext';
 const { width } = Dimensions.get('window');
 
 interface BannerTemplate {
+  id: string;
+  name: string;
+  preview: string;
+  category: 'promotional' | 'seasonal' | 'announcement' | 'service';
+  isPremium: boolean;
+}
+
+interface CompanyBanner {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  ctaText: string;
+  ctaUrl: string;
+  isActive: boolean;
+  startDate: string;
+  endDate: string;
+  template: string;
 }
 
 interface VisibilityBoost {
@@ -36,8 +54,11 @@ interface VisibilityBoost {
 
 const MarketingContent = () => {
   const { company } = useCompanyAuth();
-  const [activeTab, setActiveTab] = useState<'profile' | 'visibility' | 'analytics'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'banners' | 'visibility' | 'analytics'>('profile');
   const [isEditing, setIsEditing] = useState(false);
+  const [showBannerModal, setShowBannerModal] = useState(false);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<BannerTemplate | null>(null);
 
   // Company profile state
   const [profileData, setProfileData] = useState({
@@ -72,6 +93,33 @@ const MarketingContent = () => {
       featured: false,
       priority_support: false,
     }
+  });
+
+  // Banner state
+  const [banners, setBanners] = useState<CompanyBanner[]>([
+    {
+      id: '1',
+      title: 'Summer Sale - 30% Off All Services',
+      description: 'Limited time offer on all our premium services. Book now and save big!',
+      imageUrl: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800&h=400',
+      ctaText: 'Shop Now',
+      ctaUrl: 'https://example.com/sale',
+      isActive: true,
+      startDate: '2024-06-01',
+      endDate: '2024-08-31',
+      template: 'promotional',
+    },
+  ]);
+
+  const [newBanner, setNewBanner] = useState<Partial<CompanyBanner>>({
+    title: '',
+    description: '',
+    imageUrl: '',
+    ctaText: '',
+    ctaUrl: '',
+    isActive: true,
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
   });
 
   // Visibility boosts
@@ -118,10 +166,77 @@ const MarketingContent = () => {
     },
   ]);
 
+  // Banner templates
+  const bannerTemplates: BannerTemplate[] = [
+    {
+      id: '1',
+      name: 'Promotional Sale',
+      preview: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=400&h=200',
+      category: 'promotional',
+      isPremium: false,
+    },
+    {
+      id: '2',
+      name: 'New Service Launch',
+      preview: 'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=400&h=200',
+      category: 'announcement',
+      isPremium: false,
+    },
+    {
+      id: '3',
+      name: 'Holiday Special',
+      preview: 'https://images.pexels.com/photos/1040945/pexels-photo-1040945.jpeg?auto=compress&cs=tinysrgb&w=400&h=200',
+      category: 'seasonal',
+      isPremium: true,
+    },
+    {
+      id: '4',
+      name: 'Service Highlight',
+      preview: 'https://images.pexels.com/photos/263402/pexels-photo-263402.jpeg?auto=compress&cs=tinysrgb&w=400&h=200',
+      category: 'service',
+      isPremium: true,
+    },
+  ];
+
   const handleSaveProfile = () => {
     // TODO: Implement save functionality
     Alert.alert('Success', 'Profile updated successfully!');
     setIsEditing(false);
+  };
+
+  const handleCreateBanner = () => {
+    if (!newBanner.title || !newBanner.description) {
+      Alert.alert('Error', 'Please fill in all required fields');
+      return;
+    }
+
+    const banner: CompanyBanner = {
+      id: Date.now().toString(),
+      title: newBanner.title!,
+      description: newBanner.description!,
+      imageUrl: newBanner.imageUrl || 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800&h=400',
+      ctaText: newBanner.ctaText || 'Learn More',
+      ctaUrl: newBanner.ctaUrl || '#',
+      isActive: newBanner.isActive!,
+      startDate: newBanner.startDate!,
+      endDate: newBanner.endDate!,
+      template: selectedTemplate?.category || 'promotional',
+    };
+
+    setBanners([...banners, banner]);
+    setNewBanner({
+      title: '',
+      description: '',
+      imageUrl: '',
+      ctaText: '',
+      ctaUrl: '',
+      isActive: true,
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    });
+    setSelectedTemplate(null);
+    setShowBannerModal(false);
+    Alert.alert('Success', 'Banner created successfully!');
   };
 
   const handlePurchaseBoost = (boost: VisibilityBoost) => {
@@ -340,6 +455,63 @@ const MarketingContent = () => {
     </ScrollView>
   );
 
+  const renderBannersTab = () => (
+    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Profile Banners</Text>
+          <TouchableOpacity 
+            style={styles.createButton}
+            onPress={() => setShowBannerModal(true)}
+          >
+            <Plus size={16} color="#FFFFFF" />
+            <Text style={styles.createButtonText}>Create Banner</Text>
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.sectionDescription}>
+          Create eye-catching banners to promote your services and special offers on your public profile.
+        </Text>
+
+        <View style={styles.bannersGrid}>
+          {banners.map((banner) => (
+            <View key={banner.id} style={styles.bannerCard}>
+              <View style={styles.bannerImageContainer}>
+                <Image source={{ uri: banner.imageUrl }} style={styles.bannerImage} />
+                <View style={[styles.bannerStatus, banner.isActive ? styles.bannerActive : styles.bannerInactive]}>
+                  <Text style={styles.bannerStatusText}>
+                    {banner.isActive ? 'Active' : 'Inactive'}
+                  </Text>
+                </View>
+              </View>
+              
+              <View style={styles.bannerContent}>
+                <Text style={styles.bannerTitle}>{banner.title}</Text>
+                <Text style={styles.bannerDescription} numberOfLines={2}>
+                  {banner.description}
+                </Text>
+                
+                <View style={styles.bannerMeta}>
+                  <Text style={styles.bannerDates}>
+                    {new Date(banner.startDate).toLocaleDateString()} - {new Date(banner.endDate).toLocaleDateString()}
+                  </Text>
+                  <View style={styles.bannerActions}>
+                    <TouchableOpacity style={styles.bannerActionButton}>
+                      <Edit3 size={14} color="#5ce1e6" />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.bannerActionButton}>
+                      <Eye size={14} color="#666666" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </View>
+          ))}
+        </View>
+      </View>
+    </ScrollView>
+  );
+
   const renderVisibilityTab = () => (
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
       <View style={styles.section}>
@@ -485,6 +657,11 @@ const MarketingContent = () => {
           icon={<Building2 size={18} color={activeTab === 'profile' ? '#5ce1e6' : '#666666'} />}
         />
         <TabButton
+          tab="banners"
+          label="Banners"
+          icon={<Camera size={18} color={activeTab === 'banners' ? '#5ce1e6' : '#666666'} />}
+        />
+        <TabButton
           tab="visibility"
           label="Visibility"
           icon={<Zap size={18} color={activeTab === 'visibility' ? '#5ce1e6' : '#666666'} />}
@@ -498,8 +675,113 @@ const MarketingContent = () => {
 
       {/* Tab Content */}
       {activeTab === 'profile' && renderProfileTab()}
+      {activeTab === 'banners' && renderBannersTab()}
       {activeTab === 'visibility' && renderVisibilityTab()}
       {activeTab === 'analytics' && renderAnalyticsTab()}
+
+      {/* Banner Creation Modal */}
+      <Modal
+        visible={showBannerModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowBannerModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowBannerModal(false)}>
+              <X size={24} color="#666666" />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Create Banner</Text>
+            <TouchableOpacity onPress={handleCreateBanner}>
+              <Text style={styles.modalSaveText}>Create</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalContent}>
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Banner Title</Text>
+              <TextInput
+                style={styles.input}
+                value={newBanner.title}
+                onChangeText={(text) => setNewBanner(prev => ({ ...prev, title: text }))}
+                placeholder="Enter banner title"
+                placeholderTextColor="#666666"
+              />
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Description</Text>
+              <TextInput
+                style={styles.textArea}
+                value={newBanner.description}
+                onChangeText={(text) => setNewBanner(prev => ({ ...prev, description: text }))}
+                placeholder="Describe your promotion"
+                placeholderTextColor="#666666"
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Call to Action</Text>
+              <TextInput
+                style={styles.input}
+                value={newBanner.ctaText}
+                onChangeText={(text) => setNewBanner(prev => ({ ...prev, ctaText: text }))}
+                placeholder="e.g., Shop Now, Learn More"
+                placeholderTextColor="#666666"
+              />
+            </View>
+
+            <View style={styles.formRow}>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Start Date</Text>
+                <TextInput
+                  style={styles.input}
+                  value={newBanner.startDate}
+                  onChangeText={(text) => setNewBanner(prev => ({ ...prev, startDate: text }))}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor="#666666"
+                />
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>End Date</Text>
+                <TextInput
+                  style={styles.input}
+                  value={newBanner.endDate}
+                  onChangeText={(text) => setNewBanner(prev => ({ ...prev, endDate: text }))}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor="#666666"
+                />
+              </View>
+            </View>
+
+            <View style={styles.templateSection}>
+              <Text style={styles.label}>Choose Template</Text>
+              <View style={styles.templatesGrid}>
+                {bannerTemplates.map((template) => (
+                  <TouchableOpacity
+                    key={template.id}
+                    style={[
+                      styles.templateCard,
+                      selectedTemplate?.id === template.id && styles.templateCardSelected
+                    ]}
+                    onPress={() => setSelectedTemplate(template)}
+                  >
+                    <Image source={{ uri: template.preview }} style={styles.templateImage} />
+                    <Text style={styles.templateName}>{template.name}</Text>
+                    {template.isPremium && (
+                      <View style={styles.premiumBadge}>
+                        <Crown size={12} color="#F39C12" />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -816,6 +1098,40 @@ const styles = StyleSheet.create({
   bannerStatusText: {
     fontSize: 12,
     fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  bannerContent: {
+    padding: 16,
+  },
+  bannerTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  bannerDescription: {
+    fontSize: 14,
+    color: '#CCCCCC',
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  bannerMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  bannerDates: {
+    fontSize: 12,
+    color: '#666666',
+  },
+  bannerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  bannerActionButton: {
+    padding: 6,
+    borderRadius: 6,
+    backgroundColor: '#2A2A2A',
   },
   boostsGrid: {
     gap: 16,
@@ -975,5 +1291,71 @@ const styles = StyleSheet.create({
     color: '#666666',
     marginTop: 12,
     textAlign: 'center',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#0A0A0A',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2A2A2A',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  modalSaveText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#5ce1e6',
+  },
+  modalContent: {
+    flex: 1,
+    padding: 20,
+  },
+  templateSection: {
+    marginTop: 24,
+  },
+  templatesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  templateCard: {
+    width: (width - 64) / 2,
+    backgroundColor: '#1A1A1A',
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: '#2A2A2A',
+    position: 'relative',
+  },
+  templateCardSelected: {
+    borderColor: '#5ce1e6',
+  },
+  templateImage: {
+    width: '100%',
+    height: 80,
+  },
+  templateName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    padding: 12,
+    textAlign: 'center',
+  },
+  premiumBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#F39C12',
+    borderRadius: 12,
+    padding: 4,
   },
 });
