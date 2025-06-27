@@ -362,21 +362,21 @@ const SalesScreen = () => {
       <ScrollView 
         horizontal 
         showsHorizontalScrollIndicator={false}
-        style={[styles.categoriesContainer, { backgroundColor: '#1A1A1A' }]}
+        style={styles.categoriesContainer}
         contentContainerStyle={styles.categoriesContent}
       >
         <TouchableOpacity
           style={[
             styles.categoryChip,
             selectedCategory === null && styles.categoryChipActive,
-            { backgroundColor: selectedCategory === null ? '#5ce1e6' : '#1A1A1A' }
+            { backgroundColor: selectedCategory === null ? '#5ce1e6' : '#2A2A2A' }
           ]}
           onPress={() => setSelectedCategory(null)}
         >
           <Text style={[
             styles.categoryChipText,
             selectedCategory === null && styles.categoryChipTextActive,
-            { color: selectedCategory === null ? '#FFFFFF' : '#CCCCCC' }
+            { color: selectedCategory === null ? '#0A0A0A' : '#FFFFFF' }
           ]}>
             All
           </Text>
@@ -391,7 +391,7 @@ const SalesScreen = () => {
             style={[
               styles.categoryChip,
               selectedCategory === category.name && styles.categoryChipActive,
-              { backgroundColor: selectedCategory === category.name ? '#5ce1e6' : '#1A1A1A' }
+              { backgroundColor: selectedCategory === category.name ? '#5ce1e6' : '#2A2A2A' }
             ]}
             onPress={() => setSelectedCategory(
               selectedCategory === category.name ? null : category.name
@@ -400,7 +400,7 @@ const SalesScreen = () => {
             <Text style={[
               styles.categoryChipText,
               selectedCategory === category.name && styles.categoryChipTextActive,
-              { color: selectedCategory === category.name ? '#FFFFFF' : '#CCCCCC' }
+              { color: selectedCategory === category.name ? '#0A0A0A' : '#FFFFFF' }
             ]}>
               {category.name}
             </Text>
@@ -414,7 +414,7 @@ const SalesScreen = () => {
           <TouchableOpacity
             style={[
               styles.categoryChip,
-              { backgroundColor: '#1A1A1A' }
+              { backgroundColor: '#2A2A2A' }
             ]}
             onPress={() => setShowAllCategories(!showAllCategories)}
           >
@@ -1053,15 +1053,18 @@ const styles = StyleSheet.create({
   filterButton: {
     backgroundColor: '#5ce1e6',
     borderRadius: 12,
-    width: 48,
-    height: 48,
+    width: 46,
+    height: 46,
     justifyContent: 'center',
     alignItems: 'center',
   },
   categoriesContainer: {
     marginBottom: 12,
     borderRadius: 12,
-    paddingVertical: 8,
+    paddingVertical: 10,
+    backgroundColor: '#1A1A1A',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
   },
   categoriesContent: {
     paddingHorizontal: 12,
@@ -1070,25 +1073,28 @@ const styles = StyleSheet.create({
   categoryChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 20,
+    borderRadius: 24,
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderWidth: 1,
     borderColor: '#2A2A2A',
     gap: 8,
   },
   categoryChipActive: {
     borderColor: '#5ce1e6',
+    borderWidth: 2,
   },
   categoryChipText: {
     fontSize: 14,
     fontWeight: '600',
+     color: '#FFFFFF',
   },
   categoryChipTextActive: {
     fontWeight: '700',
+     color: '#0A0A0A',
   },
   categoryCount: {
-    backgroundColor: '#2A2A2A',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     borderRadius: 10,
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -1096,7 +1102,7 @@ const styles = StyleSheet.create({
   categoryCountText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#CCCCCC',
+    color: '#FFFFFF',
   },
   productsContainer: {
     flex: 1,
