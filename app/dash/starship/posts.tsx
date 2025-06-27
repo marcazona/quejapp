@@ -719,6 +719,7 @@ export default function PostsScreen() {
                   </View>
 
                   <View style={styles.customerStats}>
+                    <View style={styles.statsSeparator} />
                     <View style={styles.statItem}>
                       <Text style={styles.statLabel}>Points Balance</Text>
                       <Text style={styles.statValue}>
@@ -728,6 +729,7 @@ export default function PostsScreen() {
                   </View>
 
                   <View style={styles.customerActions}>
+                    <View style={styles.actionsSeparator} />
                     <Text style={styles.actionsTitle}>Fidelity/Retention</Text>
                     
                     <View style={styles.quickActions}>
@@ -1347,7 +1349,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   customerStats: {
-    gap: 8,
+    paddingTop: 16,
+  },
+  statsSeparator: {
+    height: 1,
+    backgroundColor: '#3A3A3A',
+    marginBottom: 16,
   },
   statLabel: {
     fontSize: 12,
@@ -1359,7 +1366,13 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   customerActions: {
+    paddingTop: 16,
     gap: 12,
+  },
+  actionsSeparator: {
+    height: 1,
+    backgroundColor: '#3A3A3A',
+    marginBottom: 8,
   },
   actionsTitle: {
     fontSize: 14,
