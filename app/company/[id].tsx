@@ -287,7 +287,7 @@ const LiveMoodSection = ({ companyId, companyName }: { companyId: string; compan
             />
             <Text style={[
               styles.moodVoteButtonText,
-              moodData.userVote === 'positive' && styles.moodVoteButtonTextActive
+              moodData.userVote === 'positive' && styles.moodVoteButtonTextActivePositive
             ]}>
               Good
             </Text>
@@ -310,8 +310,8 @@ const LiveMoodSection = ({ companyId, companyName }: { companyId: string; compan
             />
             <Text style={[
               styles.moodVoteButtonText,
-              !moodData.userVote && styles.moodVoteButtonNegativeText,
-              moodData.userVote === 'negative' && styles.moodVoteButtonTextActive
+              styles.moodVoteButtonNegativeText,
+              moodData.userVote === 'negative' && styles.moodVoteButtonTextActiveNegative
             ]}>
               Bad
             </Text>
@@ -1066,7 +1066,10 @@ const styles = StyleSheet.create({
   moodVoteButtonNegativeText: {
     color: '#E74C3C',
   },
-  moodVoteButtonTextActive: {
+  moodVoteButtonTextActivePositive: {
+    color: '#FFFFFF',
+  },
+  moodVoteButtonTextActiveNegative: {
     color: '#FFFFFF',
   },
   moodVoteStatus: {
