@@ -49,6 +49,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
   const initialized = useRef(false);
+  const fetchingProfile = useRef(false);
+  const currentUserId = useRef<string | null>(null);
 
   console.log('AuthProvider: Rendering - isLoading:', isLoading, 'error:', error, 'user:', !!user);
 
@@ -74,6 +76,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const fetchUserProfile = useCallback(async (userId: string) => {
+    // Prevent duplicate calls for the same user
+    if (fetchingProfile.current && currentUserId.current === userId) {
+      console.log('AuthProvider: Already fetching profile for user:', userId);
+      return;
+    }
+    
+    // Prevent fetching if we already have the user loaded
+    if (currentUserId.current === userId && user && user.id === userId) {
+      console.log('AuthProvider: User profile already loaded for:', userId);
+      return;
+    }
+
+    fetchingProfile.current = true;
+    currentUserId.current = userId;
     console.log('AuthProvider: Starting fetchUserProfile for userId:', userId);
     
     try {
@@ -97,6 +113,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (!mounted.current) {
         console.log('AuthProvider: Component unmounted, aborting fetchUserProfile');
+        fetchingProfile.current = false;
         return;
       }
 
@@ -124,6 +141,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error: any) {
       if (!mounted.current) {
         console.log('AuthProvider: Component unmounted during fetchUserProfile error handling');
+        fetchingProfile.current = false;
         return;
       }
       
@@ -138,6 +156,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       setUser(null);
       setIsLoading(false);
+    } finally {
+      fetchingProfile.current = false;
     }
   }, []);
 
@@ -153,25 +173,42 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setSession(session);
     
     if (session?.user) {
-      console.log('AuthProvider: User authenticated, fetching profile');
-      // User is authenticated, fetch their profile
-      await fetchUserProfile(session.user.id);
+      // Only fetch profile if we don't already have it or if it's a different user
+      if (!user || user.id !== session.user.id) {
+        console.log('AuthProvider: User authenticated, fetching profile');
+        await fetchUserProfile(session.user.id);
+      } else {
+        console.log('AuthProvider: User authenticated, profile already loaded');
+        setIsLoading(false);
+      }
     } else {
       console.log('AuthProvider: User not authenticated, clearing user data');
       // User is not authenticated, clear user data
       if (mounted.current) {
         setUser(null);
+        currentUserId.current = null;
         setError(null);
         setIsLoading(false);
       }
     }
-  }, [fetchUserProfile]);
+  }, [fetchUserProfile, user]);
 
   useEffect(() => {
+    // Reset initialization state when component mounts
+    initialized.current = false;
+    fetchingProfile.current = false;
+    currentUserId.current = null;
+    
     console.log('AuthProvider: useEffect triggered - setting up auth');
     mounted.current = true;
 
     const initializeAuth = async () => {
+      // Prevent duplicate initialization
+      if (initialized.current) {
+        console.log('AuthProvider: Already initialized, skipping...');
+        return;
+      }
+      
       try {
         console.log('AuthProvider: Starting authentication initialization...');
 
@@ -237,13 +274,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(handleAuthStateChange);
 
-    console.log('AuthProvider: Starting auth initialization');
-    // Initialize auth
-    initializeAuth();
+    // Only initialize if not already done
+    if (!initialized.current) {
+      console.log('AuthProvider: Starting auth initialization');
+      initializeAuth();
+    }
 
     return () => {
       console.log('AuthProvider: Cleanup - unmounting component');
       mounted.current = false;
+      fetchingProfile.current = false;
+      initialized.current = false;
+      currentUserId.current = null;
       subscription.unsubscribe();
     };
   }, [fetchUserProfile, handleAuthStateChange]);
@@ -649,6 +691,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Clear local state first
       setUser(null);
       setSession(null);
+      currentUserId.current = null;
       
       // Sign out from Supabase
       const { error } = await supabase.auth.signOut();
@@ -676,6 +719,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Even if there's an error, ensure local state is cleared
         setUser(null);
         setSession(null);
+        currentUserId.current = null;
       }
       throw error;
     } finally {
