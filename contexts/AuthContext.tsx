@@ -83,7 +83,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => {
           reject(new Error('Request timeout: Unable to fetch user profile. Please check your internet connection.'));
-        }, 10000);
+        }, 30000);
       });
 
       // Race the Supabase query against the timeout
