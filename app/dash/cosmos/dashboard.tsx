@@ -9,6 +9,7 @@ import {
   Platform,
   Dimensions,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { router } from 'expo-router';
 import { TrendingUp, TrendingDown, Users, Building2, MessageCircle, DollarSign, TriangleAlert as AlertTriangle, Eye, RefreshCw, Calendar, ChartBar as BarChart3, ChartPie as PieChart, Activity } from 'lucide-react-native';
