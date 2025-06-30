@@ -12,6 +12,7 @@ export interface ChatConversation {
     content: string;
     created_at: string;
     sender_type: 'user' | 'company';
+    read_at: string | null;
   };
 }
 
@@ -75,9 +76,33 @@ export interface CompanyClaim {
   priority: 'low' | 'medium' | 'high' | 'urgent';
   category: string;
   resolution_notes: string | null;
-  coins_awarded: number | null;
   created_at: string | null;
   updated_at: string | null;
+  user_profiles?: UserProfile;
+}
+
+export interface Post {
+  id: string;
+  user_id: string;
+  content: string;
+  photo_url: string | null;
+  likes_count: number | null;
+  comments_count: number | null;
+  created_at: string;
+  updated_at: string;
+  user_profiles?: UserProfile;
+  user_photos?: Array<{
+    photo_url: string;
+    is_primary: boolean | null;
+  }>;
+}
+
+export interface PostComment {
+  id: string;
+  post_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
   user_profiles?: UserProfile;
 }
 
@@ -86,136 +111,6 @@ export interface FullCompanyProfile extends Company {
   claims?: CompanyClaim[];
   distance?: number;
 }
-
-// Sample companies data
-const sampleCompanies: Company[] = [
-  {
-    id: '1',
-    name: 'TechCorp Solutions',
-    description: 'Leading technology solutions provider specializing in cloud computing and digital transformation.',
-    logo_url: 'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=200&h=200',
-    cover_image_url: 'https://images.pexels.com/photos/3184292/pexels-photo-3184292.jpeg?auto=compress&cs=tinysrgb&w=400&h=300',
-    industry: 'Technology',
-    website: 'https://techcorp.com',
-    phone: '+1-555-0123',
-    email: 'contact@techcorp.com',
-    address: '123 Tech Street',
-    city: 'San Francisco',
-    country: 'USA',
-    rating: 4.2,
-    total_reviews: 156,
-    total_claims: 23,
-    verified: true,
-    is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    name: 'GreenEarth Foods',
-    description: 'Organic and sustainable food products for a healthier planet and lifestyle.',
-    logo_url: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=200&h=200',
-    cover_image_url: 'https://images.pexels.com/photos/1640774/pexels-photo-1640774.jpeg?auto=compress&cs=tinysrgb&w=400&h=300',
-    industry: 'Food & Beverage',
-    website: 'https://greenearthfoods.com',
-    phone: '+1-555-0456',
-    email: 'hello@greenearthfoods.com',
-    address: '456 Green Avenue',
-    city: 'Portland',
-    country: 'USA',
-    rating: 4.7,
-    total_reviews: 89,
-    total_claims: 12,
-    verified: true,
-    is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: '3',
-    name: 'Urban Fashion Co.',
-    description: 'Trendy and affordable fashion for the modern urban lifestyle.',
-    logo_url: 'https://images.pexels.com/photos/1040945/pexels-photo-1040945.jpeg?auto=compress&cs=tinysrgb&w=200&h=200',
-    cover_image_url: 'https://images.pexels.com/photos/1040946/pexels-photo-1040946.jpeg?auto=compress&cs=tinysrgb&w=400&h=300',
-    industry: 'Fashion & Retail',
-    website: 'https://urbanfashion.com',
-    phone: '+1-555-0789',
-    email: 'style@urbanfashion.com',
-    address: '789 Fashion Boulevard',
-    city: 'New York',
-    country: 'USA',
-    rating: 3.9,
-    total_reviews: 234,
-    total_claims: 45,
-    verified: false,
-    is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: '4',
-    name: 'HealthFirst Clinic',
-    description: 'Comprehensive healthcare services with a focus on preventive medicine.',
-    logo_url: 'https://images.pexels.com/photos/263402/pexels-photo-263402.jpeg?auto=compress&cs=tinysrgb&w=200&h=200',
-    cover_image_url: 'https://images.pexels.com/photos/263401/pexels-photo-263401.jpeg?auto=compress&cs=tinysrgb&w=400&h=300',
-    industry: 'Healthcare',
-    website: 'https://healthfirst.com',
-    phone: '+1-555-0321',
-    email: 'care@healthfirst.com',
-    address: '321 Health Plaza',
-    city: 'Chicago',
-    country: 'USA',
-    rating: 4.5,
-    total_reviews: 67,
-    total_claims: 8,
-    verified: true,
-    is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: '5',
-    name: 'EcoClean Services',
-    description: 'Environmentally friendly cleaning services for homes and businesses.',
-    logo_url: 'https://images.pexels.com/photos/4239091/pexels-photo-4239091.jpeg?auto=compress&cs=tinysrgb&w=200&h=200',
-    cover_image_url: 'https://images.pexels.com/photos/4239092/pexels-photo-4239092.jpeg?auto=compress&cs=tinysrgb&w=400&h=300',
-    industry: 'Services',
-    website: 'https://ecoclean.com',
-    phone: '+1-555-0654',
-    email: 'info@ecoclean.com',
-    address: '654 Clean Street',
-    city: 'Seattle',
-    country: 'USA',
-    rating: 4.3,
-    total_reviews: 123,
-    total_claims: 19,
-    verified: true,
-    is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: '6',
-    name: 'AutoFix Garage',
-    description: 'Professional automotive repair and maintenance services you can trust.',
-    logo_url: 'https://images.pexels.com/photos/3806288/pexels-photo-3806288.jpeg?auto=compress&cs=tinysrgb&w=200&h=200',
-    cover_image_url: 'https://images.pexels.com/photos/3806289/pexels-photo-3806289.jpeg?auto=compress&cs=tinysrgb&w=400&h=300',
-    industry: 'Automotive',
-    website: 'https://autofix.com',
-    phone: '+1-555-0987',
-    email: 'service@autofix.com',
-    address: '987 Motor Way',
-    city: 'Detroit',
-    country: 'USA',
-    rating: 4.1,
-    total_reviews: 178,
-    total_claims: 34,
-    verified: false,
-    is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
 
 // Calculate age from birth date
 export const calculateAge = (birthDate: string | null): number | null => {
@@ -256,15 +151,25 @@ export const getDiscoveryCompanies = async (userLocation?: { latitude: number; l
   try {
     console.log('Database: Fetching discovery companies...');
     
-    // For now, return sample companies
-    // In a real app, this would fetch from a companies table
-    const companies = sampleCompanies.map(company => ({
+    const { data: companies, error } = await supabase
+      .from('companies')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Database: Error fetching companies:', error);
+      throw error;
+    }
+
+    // Add distance calculation if user location is provided
+    const companiesWithDistance = companies.map(company => ({
       ...company,
-      distance: userLocation ? Math.random() * 10 : undefined, // Random distance for demo
+      distance: userLocation ? Math.random() * 10 : undefined, // TODO: Calculate real distance
     }));
 
-    console.log('Database: Found', companies.length, 'companies');
-    return companies;
+    console.log('Database: Found', companiesWithDistance.length, 'companies');
+    return companiesWithDistance;
   } catch (error) {
     console.error('Database: Error in getDiscoveryCompanies:', error);
     throw error;
@@ -276,100 +181,65 @@ export const getCompanyById = async (companyId: string): Promise<FullCompanyProf
   try {
     console.log('Database: Fetching company by ID:', companyId);
     
-    const company = sampleCompanies.find(c => c.id === companyId);
+    const { data: company, error: companyError } = await supabase
+      .from('companies')
+      .select('*')
+      .eq('id', companyId)
+      .single();
+
+    if (companyError) {
+      console.error('Database: Error fetching company:', companyError);
+      throw companyError;
+    }
+
     if (!company) {
       return null;
     }
 
-    // Add sample reviews and claims
-    const sampleReviews: CompanyReview[] = [
-      {
-        id: '1',
-        company_id: companyId,
-        user_id: 'user1',
-        rating: 5,
-        title: 'Excellent service!',
-        content: 'Really impressed with the quality and professionalism. Highly recommend!',
-        is_verified_purchase: true,
-        helpful_count: 12,
-        created_at: new Date(Date.now() - 86400000).toISOString(),
-        user_profiles: {
-          id: 'user1',
-          first_name: 'Sarah',
-          last_name: 'Johnson',
-          phone: null,
-          birth_date: null,
-          avatar_url: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=100&h=100',
-          verified: true,
-          reputation: 85,
-          total_posts: 23,
-          total_likes: 156,
-          created_at: null,
-          updated_at: null,
-        },
-      },
-      {
-        id: '2',
-        company_id: companyId,
-        user_id: 'user2',
-        rating: 4,
-        title: 'Good experience overall',
-        content: 'Service was good, though there was a slight delay in delivery. Would use again.',
-        is_verified_purchase: true,
-        helpful_count: 8,
-        created_at: new Date(Date.now() - 172800000).toISOString(),
-        user_profiles: {
-          id: 'user2',
-          first_name: 'Mike',
-          last_name: 'Chen',
-          phone: null,
-          birth_date: null,
-          avatar_url: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=100&h=100',
-          verified: false,
-          reputation: 67,
-          total_posts: 15,
-          total_likes: 89,
-          created_at: null,
-          updated_at: null,
-        },
-      },
-    ];
+    // Fetch reviews
+    const { data: reviews, error: reviewsError } = await supabase
+      .from('company_reviews')
+      .select(`
+        *,
+        user_profiles (
+          id,
+          first_name,
+          last_name,
+          avatar_url,
+          verified
+        )
+      `)
+      .eq('company_id', companyId)
+      .order('created_at', { ascending: false });
 
-    const sampleClaims: CompanyClaim[] = [
-      {
-        id: '1',
-        company_id: companyId,
-        user_id: 'user3',
-        title: 'Product defect issue',
-        description: 'Received a damaged product and need replacement or refund.',
-        status: 'in_progress',
-        priority: 'medium',
-        category: 'Product Quality',
-        resolution_notes: 'Replacement has been shipped.',
-        coins_awarded: 50,
-        created_at: new Date(Date.now() - 259200000).toISOString(),
-        updated_at: new Date(Date.now() - 86400000).toISOString(),
-        user_profiles: {
-          id: 'user3',
-          first_name: 'Emma',
-          last_name: 'Davis',
-          phone: null,
-          birth_date: null,
-          avatar_url: 'https://images.pexels.com/photos/1036622/pexels-photo-1036622.jpeg?auto=compress&cs=tinysrgb&w=100&h=100',
-          verified: true,
-          reputation: 92,
-          total_posts: 31,
-          total_likes: 203,
-          created_at: null,
-          updated_at: null,
-        },
-      },
-    ];
+    if (reviewsError) {
+      console.error('Database: Error fetching reviews:', reviewsError);
+    }
+
+    // Fetch claims
+    const { data: claims, error: claimsError } = await supabase
+      .from('company_claims')
+      .select(`
+        *,
+        user_profiles (
+          id,
+          first_name,
+          last_name,
+          avatar_url,
+          verified
+        )
+      `)
+      .eq('company_id', companyId)
+      .order('created_at', { ascending: false });
+
+    if (claimsError) {
+      console.error('Database: Error fetching claims:', claimsError);
+    }
 
     return {
       ...company,
-      reviews: sampleReviews,
-      claims: sampleClaims,
+      reviews: reviews || [],
+      claims: claims || [],
     };
   } catch (error) {
     console.error('Database: Error in getCompanyById:', error);
@@ -390,38 +260,40 @@ export const searchCompanies = async (
   try {
     console.log('Database: Searching companies with query:', query);
     
-    let filteredCompanies = sampleCompanies;
+    let queryBuilder = supabase
+      .from('companies')
+      .select('*')
+      .eq('is_active', true);
 
     // Apply text search
     if (query.trim()) {
-      filteredCompanies = filteredCompanies.filter(company =>
-        company.name.toLowerCase().includes(query.toLowerCase()) ||
-        company.description.toLowerCase().includes(query.toLowerCase()) ||
-        company.industry.toLowerCase().includes(query.toLowerCase())
-      );
+      queryBuilder = queryBuilder.or(`name.ilike.%${query}%,description.ilike.%${query}%,industry.ilike.%${query}%`);
     }
 
     // Apply filters
     if (filters.industry) {
-      filteredCompanies = filteredCompanies.filter(company =>
-        company.industry === filters.industry
-      );
+      queryBuilder = queryBuilder.eq('industry', filters.industry);
     }
 
     if (filters.verified) {
-      filteredCompanies = filteredCompanies.filter(company => company.verified);
+      queryBuilder = queryBuilder.eq('verified', true);
     }
 
     if (filters.minRating) {
-      filteredCompanies = filteredCompanies.filter(company =>
-        (company.rating || 0) >= filters.minRating!
-      );
+      queryBuilder = queryBuilder.gte('rating', filters.minRating);
+    }
+
+    const { data: companies, error } = await queryBuilder.order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Database: Error searching companies:', error);
+      throw error;
     }
 
     // Add distance if location provided
-    const companiesWithDistance = filteredCompanies.map(company => ({
+    const companiesWithDistance = companies.map(company => ({
       ...company,
-      distance: userLocation ? Math.random() * 10 : undefined,
+      distance: userLocation ? Math.random() * 10 : undefined, // TODO: Calculate real distance
     }));
 
     console.log('Database: Returning', companiesWithDistance.length, 'filtered companies');
@@ -437,41 +309,45 @@ export const getUserChatConversations = async (userId: string): Promise<ChatConv
   try {
     console.log('Database: Fetching chat conversations for user:', userId);
     
-    // Mock conversations with different companies
-    const mockConversations: ChatConversation[] = [
-      {
-        id: 'conv_techcorp_' + userId,
-        user_id: userId,
-        company_id: '1',
-        status: 'active',
-        created_at: new Date(Date.now() - 86400000).toISOString(),
-        updated_at: new Date().toISOString(),
-        company: sampleCompanies[0],
-        last_message: {
-          content: 'Thank you for contacting us. How can we help?',
-          created_at: new Date().toISOString(),
-          sender_type: 'company',
-          read_at: null,
-        },
-      },
-      {
-        id: 'conv_greenearth_' + userId,
-        user_id: userId,
-        company_id: '2',
-        status: 'active',
-        created_at: new Date(Date.now() - 172800000).toISOString(),
-        updated_at: new Date(Date.now() - 3600000).toISOString(),
-        company: sampleCompanies[1],
-        last_message: {
-          content: 'Your order has been processed successfully.',
-          created_at: new Date(Date.now() - 3600000).toISOString(),
-          sender_type: 'company',
-          read_at: null,
-        },
-      },
-    ];
+    const { data: conversations, error } = await supabase
+      .from('chat_conversations')
+      .select(`
+        *,
+        companies (
+          id,
+          name,
+          logo_url,
+          verified
+        )
+      `)
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false });
 
-    return mockConversations;
+    if (error) {
+      console.error('Database: Error fetching conversations:', error);
+      throw error;
+    }
+
+    // Get last message for each conversation
+    const conversationsWithMessages = await Promise.all(
+      conversations.map(async (conv) => {
+        const { data: lastMessage } = await supabase
+          .from('chat_messages')
+          .select('content, created_at, sender_type, read_at')
+          .eq('conversation_id', conv.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        return {
+          ...conv,
+          company: conv.companies,
+          last_message: lastMessage,
+        };
+      })
+    );
+
+    return conversationsWithMessages;
   } catch (error) {
     console.error('Database: Error in getUserChatConversations:', error);
     throw error;
@@ -482,49 +358,336 @@ export const startLiveChatWithCompany = async (userId: string, companyId: string
   try {
     console.log('Database: Starting live chat between user:', userId, 'and company:', companyId);
     
-    // Create unique conversation ID based on user and company
-    const conversationId = `conv_${companyId}_${userId}_${Date.now()}`;
-    
-    // Find the company
-    const company = sampleCompanies.find(c => c.id === companyId);
-    
-    if (!company) {
-      throw new Error('Company not found');
+    // Check if conversation already exists
+    const { data: existingConv } = await supabase
+      .from('chat_conversations')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('company_id', companyId)
+      .eq('status', 'active')
+      .single();
+
+    if (existingConv) {
+      // Return existing conversation
+      const { data: company } = await supabase
+        .from('companies')
+        .select('*')
+        .eq('id', companyId)
+        .single();
+
+      return {
+        ...existingConv,
+        company,
+      };
     }
-    
-    // Create new conversation object
-    const newConversation: ChatConversation = {
-      id: conversationId,
-      user_id: userId,
-      company_id: companyId,
-      status: 'active',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      company: company,
-      last_message: {
-        content: `Hello! Welcome to ${company.name}. How can we assist you today?`,
-        created_at: new Date().toISOString(),
+
+    // Create new conversation
+    const { data: newConv, error: convError } = await supabase
+      .from('chat_conversations')
+      .insert({
+        user_id: userId,
+        company_id: companyId,
+        status: 'active',
+      })
+      .select()
+      .single();
+
+    if (convError) {
+      console.error('Database: Error creating conversation:', convError);
+      throw convError;
+    }
+
+    // Get company details
+    const { data: company } = await supabase
+      .from('companies')
+      .select('*')
+      .eq('id', companyId)
+      .single();
+
+    // Send initial message from company
+    await supabase
+      .from('chat_messages')
+      .insert({
+        conversation_id: newConv.id,
+        sender_id: 'system',
         sender_type: 'company',
-        read_at: null,
-      },
+        content: `Hello! Welcome to ${company?.name || 'our company'}. How can we assist you today?`,
+        message_type: 'text',
+      });
+
+    return {
+      ...newConv,
+      company,
     };
-    
-    return newConversation;
   } catch (error) {
     console.error('Database: Error in startLiveChatWithCompany:', error);
     throw error;
   }
 };
 
-// Legacy functions for backward compatibility
+// Post-related functions
+export const getUserPosts = async (currentUserId?: string): Promise<Post[]> => {
+  try {
+    console.log('Database: Fetching user posts...');
+    
+    const { data: posts, error } = await supabase
+      .from('posts')
+      .select(`
+        *,
+        user_profiles (
+          id,
+          first_name,
+          last_name,
+          avatar_url,
+          verified
+        ),
+        user_photos (
+          photo_url,
+          is_primary
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Database: Error fetching posts:', error);
+      throw error;
+    }
+
+    return posts || [];
+  } catch (error) {
+    console.error('Database: Error in getUserPosts:', error);
+    throw error;
+  }
+};
+
+export const createPost = async (userId: string, content: string, photoUrl?: string): Promise<Post> => {
+  try {
+    console.log('Database: Creating new post for user:', userId);
+    
+    const { data: post, error } = await supabase
+      .from('posts')
+      .insert({
+        user_id: userId,
+        content,
+        photo_url: photoUrl,
+        likes_count: 0,
+        comments_count: 0,
+      })
+      .select(`
+        *,
+        user_profiles (
+          id,
+          first_name,
+          last_name,
+          avatar_url,
+          verified
+        )
+      `)
+      .single();
+
+    if (error) {
+      console.error('Database: Error creating post:', error);
+      throw error;
+    }
+
+    return post;
+  } catch (error) {
+    console.error('Database: Error in createPost:', error);
+    throw error;
+  }
+};
+
+export const likePost = async (postId: string, userId: string): Promise<void> => {
+  try {
+    console.log('Database: Liking post:', postId, 'by user:', userId);
+    
+    // TODO: Implement likes table and logic
+    // For now, just increment the likes count
+    const { error } = await supabase.rpc('increment_post_likes', {
+      post_id: postId
+    });
+
+    if (error) {
+      console.error('Database: Error liking post:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Database: Error in likePost:', error);
+    throw error;
+  }
+};
+
+export const getPostComments = async (postId: string): Promise<PostComment[]> => {
+  try {
+    console.log('Database: Fetching comments for post:', postId);
+    
+    // TODO: Implement comments table
+    // For now, return empty array
+    return [];
+  } catch (error) {
+    console.error('Database: Error in getPostComments:', error);
+    throw error;
+  }
+};
+
+export const addComment = async (postId: string, userId: string, content: string): Promise<PostComment> => {
+  try {
+    console.log('Database: Adding comment to post:', postId, 'by user:', userId);
+    
+    // TODO: Implement comments table and logic
+    throw new Error('Comments feature not yet implemented');
+  } catch (error) {
+    console.error('Database: Error in addComment:', error);
+    throw error;
+  }
+};
+
+// User photos functions
 export const getUserPhotos = async (userId: string) => {
-  return [];
+  try {
+    console.log('Database: Fetching photos for user:', userId);
+    
+    const { data: photos, error } = await supabase
+      .from('user_photos')
+      .select('*')
+      .eq('user_id', userId)
+      .order('order_index', { ascending: true });
+
+    if (error) {
+      console.error('Database: Error fetching user photos:', error);
+      throw error;
+    }
+
+    return photos || [];
+  } catch (error) {
+    console.error('Database: Error in getUserPhotos:', error);
+    throw error;
+  }
 };
 
 export const updateUserPhotos = async (userId: string, photos: any[]) => {
-  // No-op for now
+  try {
+    console.log('Database: Updating photos for user:', userId);
+    
+    // Delete existing photos
+    await supabase
+      .from('user_photos')
+      .delete()
+      .eq('user_id', userId);
+
+    // Insert new photos
+    if (photos.length > 0) {
+      const { error } = await supabase
+        .from('user_photos')
+        .insert(
+          photos.map((photo, index) => ({
+            user_id: userId,
+            photo_url: photo.photo_url,
+            is_primary: photo.is_primary,
+            order_index: index,
+          }))
+        );
+
+      if (error) {
+        console.error('Database: Error updating user photos:', error);
+        throw error;
+      }
+    }
+  } catch (error) {
+    console.error('Database: Error in updateUserPhotos:', error);
+    throw error;
+  }
 };
 
-export const getUserPosts = async (currentUserId?: string) => {
-  return [];
+// Company review functions
+export const createCompanyReview = async (
+  companyId: string,
+  userId: string,
+  title: string,
+  content: string,
+  rating: number
+): Promise<CompanyReview> => {
+  try {
+    console.log('Database: Creating review for company:', companyId);
+    
+    const { data: review, error } = await supabase
+      .from('company_reviews')
+      .insert({
+        company_id: companyId,
+        user_id: userId,
+        title,
+        content,
+        rating,
+        is_verified_purchase: false,
+        helpful_count: 0,
+      })
+      .select(`
+        *,
+        user_profiles (
+          id,
+          first_name,
+          last_name,
+          avatar_url,
+          verified
+        )
+      `)
+      .single();
+
+    if (error) {
+      console.error('Database: Error creating review:', error);
+      throw error;
+    }
+
+    return review;
+  } catch (error) {
+    console.error('Database: Error in createCompanyReview:', error);
+    throw error;
+  }
+};
+
+// Company claim functions
+export const createCompanyClaim = async (
+  companyId: string,
+  userId: string,
+  title: string,
+  description: string,
+  category: string,
+  priority: 'low' | 'medium' | 'high' | 'urgent' = 'medium'
+): Promise<CompanyClaim> => {
+  try {
+    console.log('Database: Creating claim for company:', companyId);
+    
+    const { data: claim, error } = await supabase
+      .from('company_claims')
+      .insert({
+        company_id: companyId,
+        user_id: userId,
+        title,
+        description,
+        category,
+        priority,
+        status: 'pending',
+      })
+      .select(`
+        *,
+        user_profiles (
+          id,
+          first_name,
+          last_name,
+          avatar_url,
+          verified
+        )
+      `)
+      .single();
+
+    if (error) {
+      console.error('Database: Error creating claim:', error);
+      throw error;
+    }
+
+    return claim;
+  } catch (error) {
+    console.error('Database: Error in createCompanyClaim:', error);
+    throw error;
+  }
 };

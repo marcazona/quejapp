@@ -13,35 +13,15 @@ import {
   TextInput,
   Modal,
   ActivityIndicator,
+  Alert,
+  RefreshControl,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Heart, MessageCircle, Share, MoveHorizontal as MoreHorizontal, Camera, Video, Type, Plus, Send, X, Smile, MapPin, Clock, Shield, Zap, User } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import { calculateAge } from '@/lib/database';
+import { getUserPosts, createPost, likePost, type Post } from '@/lib/database';
 
 const { width } = Dimensions.get('window');
-
-interface Post {
-  id: string;
-  user_id: string;
-  content: string;
-  photo_url: string | null;
-  likes_count: number;
-  comments_count: number;
-  created_at: string;
-  updated_at: string;
-  user_profiles: {
-    id: string;
-    first_name: string;
-    last_name: string;
-    avatar_url: string | null;
-    verified: boolean | null;
-  };
-  user_photos?: Array<{
-    photo_url: string;
-    is_primary: boolean | null;
-  }>;
-}
 
 const PostCard = ({ post, onLike, onComment, onShare }: { 
   post: Post; 
@@ -74,7 +54,7 @@ const PostCard = ({ post, onLike, onComment, onShare }: {
 
   const userProfile = post.user_profiles;
   const primaryPhoto = post.user_photos?.find(p => p.is_primary);
-  const avatarUrl = userProfile.avatar_url || primaryPhoto?.photo_url;
+  const avatarUrl = userProfile?.avatar_url || primaryPhoto?.photo_url;
 
   return (
     <View style={styles.postCard}>
@@ -89,7 +69,7 @@ const PostCard = ({ post, onLike, onComment, onShare }: {
                 <User size={24} color="#666666" />
               </View>
             )}
-            {userProfile.verified && (
+            {userProfile?.verified && (
               <View style={styles.verifiedBadge}>
                 <Shield size={12} color="#FFFFFF" />
               </View>
@@ -99,7 +79,7 @@ const PostCard = ({ post, onLike, onComment, onShare }: {
           <View style={styles.userDetails}>
             <View style={styles.nameRow}>
               <Text style={styles.userName}>
-                {userProfile.first_name} {userProfile.last_name}
+                {userProfile?.first_name} {userProfile?.last_name}
               </Text>
             </View>
             
@@ -173,13 +153,25 @@ const CreatePostModal = ({ visible, onClose, onPost }: {
   const { user } = useAuth();
   const [content, setContent] = useState('');
   const [selectedMediaType, setSelectedMediaType] = useState<'image' | 'video' | null>(null);
+  const [isPosting, setIsPosting] = useState(false);
 
-  const handlePost = () => {
-    if (content.trim() || selectedMediaType) {
-      onPost(content.trim(), selectedMediaType || undefined);
+  const handlePost = async () => {
+    if (!content.trim()) {
+      Alert.alert('Error', 'Please write something to post');
+      return;
+    }
+
+    setIsPosting(true);
+    try {
+      await onPost(content.trim(), selectedMediaType || undefined);
       setContent('');
       setSelectedMediaType(null);
       onClose();
+    } catch (error) {
+      console.error('Error creating post:', error);
+      Alert.alert('Error', 'Failed to create post. Please try again.');
+    } finally {
+      setIsPosting(false);
     }
   };
 
@@ -193,18 +185,22 @@ const CreatePostModal = ({ visible, onClose, onPost }: {
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <SafeAreaView style={styles.modalContainer}>
         <View style={styles.modalHeader}>
-          <TouchableOpacity onPress={handleClose}>
+          <TouchableOpacity onPress={handleClose} disabled={isPosting}>
             <X size={24} color="#666666" />
           </TouchableOpacity>
           <Text style={styles.modalTitle}>Create Post</Text>
           <TouchableOpacity 
-            style={[styles.postButton, (!content.trim() && !selectedMediaType) && styles.postButtonDisabled]}
+            style={[styles.postButton, (!content.trim()) && styles.postButtonDisabled]}
             onPress={handlePost}
-            disabled={!content.trim() && !selectedMediaType}
+            disabled={!content.trim() || isPosting}
           >
-            <Text style={[styles.postButtonText, (!content.trim() && !selectedMediaType) && styles.postButtonTextDisabled]}>
-              Post
-            </Text>
+            {isPosting ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={[styles.postButtonText, (!content.trim()) && styles.postButtonTextDisabled]}>
+                Post
+              </Text>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -234,9 +230,10 @@ const CreatePostModal = ({ visible, onClose, onPost }: {
             multiline
             maxLength={500}
             textAlignVertical="top"
-            autoCorrect={false}
+            autoCorrect={true}
             autoCapitalize="sentences"
             blurOnSubmit={false}
+            editable={!isPosting}
           />
 
           {selectedMediaType && (
@@ -254,6 +251,7 @@ const CreatePostModal = ({ visible, onClose, onPost }: {
               <TouchableOpacity 
                 style={styles.removeMediaButton}
                 onPress={() => setSelectedMediaType(null)}
+                disabled={isPosting}
               >
                 <X size={16} color="#666666" />
               </TouchableOpacity>
@@ -264,6 +262,7 @@ const CreatePostModal = ({ visible, onClose, onPost }: {
             <TouchableOpacity 
               style={[styles.mediaOption, selectedMediaType === 'image' && styles.selectedMediaOption]}
               onPress={() => setSelectedMediaType(selectedMediaType === 'image' ? null : 'image')}
+              disabled={isPosting}
             >
               <Camera size={24} color={selectedMediaType === 'image' ? "#5ce1e6" : "#666666"} />
               <Text style={[styles.mediaOptionText, selectedMediaType === 'image' && styles.selectedMediaOptionText]}>
@@ -274,6 +273,7 @@ const CreatePostModal = ({ visible, onClose, onPost }: {
             <TouchableOpacity 
               style={[styles.mediaOption, selectedMediaType === 'video' && styles.selectedMediaOption]}
               onPress={() => setSelectedMediaType(selectedMediaType === 'video' ? null : 'video')}
+              disabled={isPosting}
             >
               <Video size={24} color={selectedMediaType === 'video' ? "#5ce1e6" : "#666666"} />
               <Text style={[styles.mediaOptionText, selectedMediaType === 'video' && styles.selectedMediaOptionText]}>
@@ -304,8 +304,8 @@ export default function FeedScreen() {
       }
       setError(null);
 
-      // For now, return empty posts since we're focusing on companies
-      setPosts([]);
+      const userPosts = await getUserPosts(user?.id);
+      setPosts(userPosts);
     } catch (error: any) {
       console.error('Error loading posts:', error);
       setError(error.message || 'Failed to load posts');
@@ -316,30 +316,50 @@ export default function FeedScreen() {
   };
 
   useEffect(() => {
-    loadPosts();
+    if (user) {
+      loadPosts();
+    }
   }, [user]);
 
-  const handleLike = (postId: string) => {
-    console.log('Like post:', postId);
-    // TODO: Implement like functionality with database
+  const handleLike = async (postId: string) => {
+    if (!user) return;
+    
+    try {
+      await likePost(postId, user.id);
+    } catch (error: any) {
+      console.error('Error liking post:', error);
+      Alert.alert('Error', 'Failed to like post');
+    }
   };
 
   const handleComment = (postId: string) => {
     console.log('Comment on post:', postId);
     // TODO: Navigate to comments or open comment modal
+    Alert.alert('Comments', 'Comments feature coming soon!');
   };
 
   const handleShare = (postId: string) => {
     console.log('Share post:', postId);
     // TODO: Handle share functionality
+    Alert.alert('Share', 'Share feature coming soon!');
   };
 
-  const handleCreatePost = (content: string, mediaType?: 'image' | 'video') => {
-    console.log('Create post:', { content, mediaType });
-    // TODO: Implement post creation with database
-    // For now, just close the modal
-    setShowCreatePost(false);
+  const handleCreatePost = async (content: string, mediaType?: 'image' | 'video') => {
+    if (!user) return;
+    
+    try {
+      const newPost = await createPost(user.id, content);
+      setPosts(prevPosts => [newPost, ...prevPosts]);
+      Alert.alert('Success', 'Post created successfully!');
+    } catch (error: any) {
+      console.error('Error creating post:', error);
+      throw error;
+    }
   };
+
+  const onRefresh = React.useCallback(() => {
+    loadPosts(true);
+  }, []);
 
   if (loading) {
     return (
@@ -437,6 +457,9 @@ export default function FeedScreen() {
           style={styles.feedContainer}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.feedContent}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#5ce1e6" />
+          }
         >
           {posts.map((post) => (
             <PostCard
@@ -741,6 +764,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 12,
+    minWidth: 60,
+    alignItems: 'center',
   },
   postButtonDisabled: {
     backgroundColor: '#2A2A2A',
