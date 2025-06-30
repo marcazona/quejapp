@@ -15,6 +15,8 @@ export function useFrameworkReady() {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       window.frameworkReady?.();
     }
+  }
+  )
   // Only execute framework ready logic on web platform
   if (Platform.OS === 'web') {
     console.log('useFrameworkReady: Executing for web platform');
