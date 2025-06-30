@@ -274,7 +274,7 @@ const LiveMoodSection = ({ companyId, companyName }: { companyId: string; compan
             style={[
               styles.moodVoteButton,
               styles.moodVoteButtonPositive,
-              moodData.userVote === 'positive' && styles.moodVoteButtonActive,
+              moodData.userVote === 'positive' && styles.moodVoteButtonActivePositive,
               isVoting && styles.moodVoteButtonDisabled,
             ]}
             onPress={() => handleVote('positive')}
@@ -297,7 +297,7 @@ const LiveMoodSection = ({ companyId, companyName }: { companyId: string; compan
             style={[
               styles.moodVoteButton,
               styles.moodVoteButtonNegative,
-              moodData.userVote === 'negative' && styles.moodVoteButtonActive,
+              moodData.userVote === 'negative' && styles.moodVoteButtonActiveNegative,
               isVoting && styles.moodVoteButtonDisabled,
             ]}
             onPress={() => handleVote('negative')}
@@ -1054,9 +1054,13 @@ const styles = StyleSheet.create({
     borderColor: '#E74C3C',
     backgroundColor: 'transparent',
   },
-  moodVoteButtonActive: {
+  moodVoteButtonActivePositive: {
     backgroundColor: '#27AE60',
     borderColor: '#27AE60',
+  },
+  moodVoteButtonActiveNegative: {
+    backgroundColor: '#E74C3C',
+    borderColor: '#E74C3C',
   },
   moodVoteButtonDisabled: {
     opacity: 0.5,
