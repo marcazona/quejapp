@@ -49,8 +49,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
   const initialized = useRef(false);
-  const retryAttempts = useRef(0);
-  const maxRetries = 3;
 
   console.log('AuthProvider: Rendering - isLoading:', isLoading, 'error:', error, 'user:', !!user);
 
@@ -82,13 +80,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
            error.name === 'TypeError';
   };
 
-  const fetchUserProfile = useCallback(async (userId: string, retryCount = 0): Promise<void> => {
+  const fetchUserProfile = useCallback(async (userId: string): Promise<void> => {
     if (!mounted.current) {
       console.log('AuthProvider: Component unmounted, aborting fetchUserProfile');
       return;
     }
 
-    console.log('AuthProvider: Fetching user profile for userId:', userId, 'attempt:', retryCount + 1);
+    console.log('AuthProvider: Fetching user profile for userId:', userId);
     
     try {
       const { data, error } = await supabase
@@ -105,15 +103,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (error) {
         console.error('AuthProvider: Error fetching user profile:', error);
         
-        if (isNetworkError(error) && retryCount < maxRetries) {
-          console.log(`AuthProvider: Network error, retrying in ${(retryCount + 1) * 2} seconds...`);
-          await sleep((retryCount + 1) * 2000);
-          if (mounted.current) {
-            return fetchUserProfile(userId, retryCount + 1);
-          }
-          return;
-        }
-        
         if (isNetworkError(error)) {
           setError('Unable to connect to the server. Operating in offline mode.');
           setUser(null);
@@ -129,7 +118,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(data);
         setError(null);
         setIsLoading(false);
-        retryAttempts.current = 0;
       } else {
         console.log('AuthProvider: No user profile found for user:', userId);
         setUser(null);
@@ -142,15 +130,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       
       console.error('AuthProvider: Exception in fetchUserProfile:', error);
-      
-      if (isNetworkError(error) && retryCount < maxRetries) {
-        console.log(`AuthProvider: Network exception, retrying in ${(retryCount + 1) * 2} seconds...`);
-        await sleep((retryCount + 1) * 2000);
-        if (mounted.current) {
-          return fetchUserProfile(userId, retryCount + 1);
-        }
-        return;
-      }
       
       if (isNetworkError(error)) {
         setError('Unable to connect to the server. Operating in offline mode.');
@@ -173,13 +152,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setSession(session);
     
     if (session?.user) {
-      if (!user || user.id !== session.user.id) {
-        console.log('AuthProvider: User authenticated, fetching profile');
-        await fetchUserProfile(session.user.id);
-      } else {
-        console.log('AuthProvider: User authenticated, profile already loaded');
-        setIsLoading(false);
-      }
+      console.log('AuthProvider: User authenticated, fetching profile');
+      await fetchUserProfile(session.user.id);
     } else {
       console.log('AuthProvider: User not authenticated, clearing user data');
       if (mounted.current) {
@@ -188,7 +162,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setIsLoading(false);
       }
     }
-  }, [fetchUserProfile, user]);
+  }, [fetchUserProfile]);
 
   const initializeAuth = useCallback(async () => {
     if (initialized.current || !mounted.current) {
@@ -210,7 +184,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return;
       }
 
-      console.log('AuthProvider: Getting session...');
+      console.log('AuthProvider: Environment variables found, getting session...');
 
       const { data: { session }, error } = await supabase.auth.getSession();
       
@@ -276,9 +250,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('AuthProvider: Cleanup - unmounting component');
       mounted.current = false;
       subscription.unsubscribe();
-      // Don't reset initialized.current here to prevent re-initialization
     };
-  }, []); // Empty dependency array to prevent re-runs
+  }, [handleAuthStateChange, initializeAuth]);
 
   const signIn = async (email: string, password: string) => {
     if (!mounted.current) return;
@@ -328,14 +301,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       const lowerEmail = trimmedEmail.toLowerCase();
-      if (lowerEmail.includes('demo') || lowerEmail.includes('test') || lowerEmail.includes('example')) {
-        const error = new Error('Demo accounts are not allowed. Please use a real email address.');
-        if (mounted.current) {
-          setError(error.message);
-          setIsLoading(false);
-        }
-        throw error;
-      }
 
       console.log('AuthProvider: Attempting Supabase authentication');
 
@@ -429,7 +394,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
           throw error;
         }
-        // If it's a network error, continue with authentication
         console.log('AuthProvider: Network error during profile verification, continuing...');
       }
 
@@ -477,9 +441,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       const lowerEmail = userData.email.trim().toLowerCase();
-      if (lowerEmail.includes('demo') || lowerEmail.includes('test') || lowerEmail.includes('example')) {
-        throw new Error('Demo email addresses are not allowed. Please use a real email address.');
-      }
 
       if (!validateStrongPassword(userData.password)) {
         throw new Error('Password must be at least 8 characters long and contain uppercase, lowercase, and number');
@@ -762,9 +723,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       const lowerEmail = email.trim().toLowerCase();
-      if (lowerEmail.includes('demo') || lowerEmail.includes('test') || lowerEmail.includes('example')) {
-        throw new Error('Demo email addresses are not supported. Please use a real email address.');
-      }
 
       const { error } = await supabase.auth.resetPasswordForEmail(lowerEmail, {
         redirectTo: Platform.OS === 'web' ? `${window.location.origin}/reset-password` : undefined,
