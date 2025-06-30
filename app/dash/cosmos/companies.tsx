@@ -14,6 +14,7 @@ import {
   Image,
   Switch,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { Building2, Plus, Search, Filter, MoveVertical as MoreVertical, Shield, Globe, Phone, Mail, MapPin, CreditCard as Edit, Trash2, Ban, CircleCheck as CheckCircle, X, Save } from 'lucide-react-native';
 import { useCosmosAuth } from '@/contexts/CosmosAuthContext';
@@ -77,7 +78,7 @@ const CompanyCard = ({
             <Text style={styles.companyIndustry}>{company.industry}</Text>
             <View style={styles.companyMeta}>
               <Text style={styles.companyMetaText}>
-                {company.total_reviews} reviews • {company.total_claims} claims
+                {company.total_reviews || 0} reviews • {company.total_claims || 0} claims
               </Text>
               <View style={[
                 styles.statusBadge, 
@@ -404,6 +405,7 @@ const CompaniesContent = () => {
   const { admin } = useCosmosAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
@@ -428,12 +430,14 @@ const CompaniesContent = () => {
         return;
       }
 
+      console.log('Loaded companies:', data?.length || 0);
       setCompanies(data || []);
     } catch (error) {
       console.error('Error loading companies:', error);
       Alert.alert('Error', 'Failed to load companies');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -455,8 +459,7 @@ const CompaniesContent = () => {
           total_reviews: 0,
           total_claims: 0,
         }])
-        .select()
-        .single();
+        .select();
 
       if (error) {
         console.error('Error creating company:', error);
@@ -464,8 +467,10 @@ const CompaniesContent = () => {
         return;
       }
 
-      setCompanies(prev => [data, ...prev]);
-      Alert.alert('Success', 'Company created successfully');
+      if (data && data.length > 0) {
+        setCompanies(prev => [data[0], ...prev]);
+        Alert.alert('Success', 'Company created successfully');
+      }
     } catch (error) {
       console.error('Error creating company:', error);
       Alert.alert('Error', 'Failed to create company');
@@ -490,8 +495,7 @@ const CompaniesContent = () => {
           is_active: companyData.is_active,
         })
         .eq('id', editingCompany.id)
-        .select()
-        .single();
+        .select();
 
       if (error) {
         console.error('Error updating company:', error);
@@ -499,9 +503,11 @@ const CompaniesContent = () => {
         return;
       }
 
-      setCompanies(prev => prev.map(c => c.id === editingCompany.id ? data : c));
-      setEditingCompany(null);
-      Alert.alert('Success', 'Company updated successfully');
+      if (data && data.length > 0) {
+        setCompanies(prev => prev.map(c => c.id === editingCompany.id ? data[0] : c));
+        setEditingCompany(null);
+        Alert.alert('Success', 'Company updated successfully');
+      }
     } catch (error) {
       console.error('Error updating company:', error);
       Alert.alert('Error', 'Failed to update company');
@@ -618,6 +624,11 @@ const CompaniesContent = () => {
     );
   };
 
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    loadCompanies();
+  }, []);
+
   const filteredCompanies = companies.filter(company => {
     const matchesSearch = company.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          company.industry.toLowerCase().includes(searchQuery.toLowerCase());
@@ -697,25 +708,40 @@ const CompaniesContent = () => {
             <Text style={styles.loadingText}>Loading companies...</Text>
           </View>
         ) : (
-          <ScrollView style={styles.companiesList} showsVerticalScrollIndicator={false}>
-            {filteredCompanies.map((company) => (
-              <CompanyCard
-                key={company.id}
-                company={company}
-                onEdit={setEditingCompany}
-                onDelete={handleDeleteCompany}
-                onToggleStatus={handleToggleStatus}
-                onToggleVerification={handleToggleVerification}
-              />
-            ))}
-            
-            {filteredCompanies.length === 0 && (
+          <ScrollView 
+            style={styles.companiesList} 
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF6B6B" />
+            }
+          >
+            {filteredCompanies.length > 0 ? (
+              filteredCompanies.map((company) => (
+                <CompanyCard
+                  key={company.id}
+                  company={company}
+                  onEdit={setEditingCompany}
+                  onDelete={handleDeleteCompany}
+                  onToggleStatus={handleToggleStatus}
+                  onToggleVerification={handleToggleVerification}
+                />
+              ))
+            ) : (
               <View style={styles.emptyState}>
                 <Building2 size={64} color="#3A3A3A" />
                 <Text style={styles.emptyTitle}>No companies found</Text>
                 <Text style={styles.emptySubtitle}>
                   {searchQuery ? 'Try adjusting your search terms' : 'Create your first company to get started'}
                 </Text>
+                {!searchQuery && (
+                  <TouchableOpacity 
+                    style={styles.createEmptyButton}
+                    onPress={() => setShowCreateModal(true)}
+                  >
+                    <Plus size={16} color="#FFFFFF" />
+                    <Text style={styles.createEmptyButtonText}>Create Company</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             )}
           </ScrollView>
@@ -1071,5 +1097,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666666',
     textAlign: 'center',
+    marginBottom: 20,
+  },
+  createEmptyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FF6B6B',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  createEmptyButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

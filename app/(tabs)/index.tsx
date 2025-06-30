@@ -15,7 +15,7 @@ import {
   Alert,
 } from 'react-native';
 import { router } from 'expo-router';
-import { MapPin, Star, Shield, MessageCircle, User, Building2, Phone, Mail, Globe, Plus } from 'lucide-react-native';
+import { MapPin, Star, Shield, MessageCircle, User, Building2, Phone, Mail, Globe, Plus, RefreshCw } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { getDiscoveryCompanies, createSampleCompanies, type Company } from '@/lib/database';
 
@@ -115,6 +115,7 @@ export default function DiscoverScreen() {
       const userLocation = undefined;
 
       const discoveryCompanies = await getDiscoveryCompanies(userLocation);
+      console.log('Loaded companies:', discoveryCompanies.length);
       setCompanies(discoveryCompanies);
     } catch (error: any) {
       console.error('Error loading discovery companies:', error);
@@ -122,18 +123,6 @@ export default function DiscoverScreen() {
     } finally {
       setLoading(false);
       setRefreshing(false);
-    }
-  };
-
-  const handleCreateSampleData = async () => {
-    try {
-      setLoading(true);
-      await createSampleCompanies();
-      await loadCompanies();
-      Alert.alert('Success', 'Sample companies created successfully!');
-    } catch (error: any) {
-      console.error('Error creating sample companies:', error);
-      Alert.alert('Error', 'Failed to create sample companies');
     }
   };
 
@@ -151,6 +140,20 @@ export default function DiscoverScreen() {
 
   const handleProfilePress = () => {
     router.push('/(tabs)/profile');
+  };
+
+  const handleCreateSampleData = async () => {
+    try {
+      setLoading(true);
+      await createSampleCompanies();
+      await loadCompanies();
+      Alert.alert('Success', 'Sample companies created successfully!');
+    } catch (error: any) {
+      console.error('Error creating sample companies:', error);
+      Alert.alert('Error', error.message || 'Failed to create sample companies');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (loading) {
@@ -277,6 +280,7 @@ export default function DiscoverScreen() {
             We're adding new companies every day. Check back soon to discover businesses you can interact with!
           </Text>
           <TouchableOpacity style={styles.refreshButton} onPress={() => loadCompanies()}>
+            <RefreshCw size={16} color="#FFFFFF" />
             <Text style={styles.refreshButtonText}>Refresh</Text>
           </TouchableOpacity>
           
@@ -416,6 +420,9 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   refreshButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     backgroundColor: '#5ce1e6',
     paddingHorizontal: 24,
     paddingVertical: 16,

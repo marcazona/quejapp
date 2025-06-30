@@ -893,16 +893,31 @@ export const createSampleCompanies = async (): Promise<void> => {
       },
     ];
 
-    const { error } = await supabase
-      .from('companies')
-      .insert(sampleCompanies);
-
-    if (error) {
-      console.error('Database: Error creating sample companies:', error);
-      throw error;
+    // Insert companies one by one to avoid conflicts
+    for (const company of sampleCompanies) {
+      // Check if company with same name already exists
+      const { data: existing } = await supabase
+        .from('companies')
+        .select('id')
+        .eq('name', company.name)
+        .maybeSingle();
+      
+      if (!existing) {
+        const { error } = await supabase
+          .from('companies')
+          .insert([company]);
+        
+        if (error) {
+          console.error('Database: Error inserting company:', company.name, error);
+        } else {
+          console.log('Database: Created company:', company.name);
+        }
+      } else {
+        console.log('Database: Company already exists:', company.name);
+      }
     }
 
-    console.log('Database: Sample companies created successfully');
+    console.log('Database: Sample companies creation completed');
   } catch (error) {
     console.error('Database: Error in createSampleCompanies:', error);
     throw error;
