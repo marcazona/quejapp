@@ -45,12 +45,12 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // Start with true for initial load
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
   const initialized = useRef(false);
-  const fetchingProfile = useRef(false);
-  const currentUserId = useRef<string | null>(null);
+  const retryAttempts = useRef(0);
+  const maxRetries = 3;
 
   console.log('AuthProvider: Rendering - isLoading:', isLoading, 'error:', error, 'user:', !!user);
 
@@ -65,66 +65,63 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const validatePassword = (password: string): boolean => {
-    // Require at least 6 characters for sign in, 8 for sign up
     return password.length >= 6;
   };
 
   const validateStrongPassword = (password: string): boolean => {
-    // Require at least 8 characters, one uppercase, one lowercase, one number
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$/;
     return passwordRegex.test(password);
   };
 
-  const fetchUserProfile = useCallback(async (userId: string) => {
-    // Prevent duplicate calls for the same user
-    if (fetchingProfile.current && currentUserId.current === userId) {
-      console.log('AuthProvider: Already fetching profile for user:', userId);
-      return;
-    }
-    
-    // Prevent fetching if we already have the user loaded
-    if (currentUserId.current === userId && user && user.id === userId) {
-      console.log('AuthProvider: User profile already loaded for:', userId);
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  const isNetworkError = (error: any): boolean => {
+    return error.message?.includes('Failed to fetch') || 
+           error.message?.includes('Network request failed') ||
+           error.message?.includes('fetch') ||
+           error.name === 'TypeError';
+  };
+
+  const fetchUserProfile = useCallback(async (userId: string, retryCount = 0): Promise<void> => {
+    if (!mounted.current) {
+      console.log('AuthProvider: Component unmounted, aborting fetchUserProfile');
       return;
     }
 
-    fetchingProfile.current = true;
-    currentUserId.current = userId;
-    console.log('AuthProvider: Starting fetchUserProfile for userId:', userId);
+    console.log('AuthProvider: Fetching user profile for userId:', userId, 'attempt:', retryCount + 1);
     
     try {
-      console.log('AuthProvider: Making Supabase query for user profile');
-      
-      // Create a timeout promise that rejects after 10 seconds
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => {
-          reject(new Error('Request timeout: Unable to fetch user profile. Please check your internet connection.'));
-        }, 30000);
-      });
-
-      // Race the Supabase query against the timeout
-      const supabaseQuery = supabase
+      const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('id', userId)
         .maybeSingle();
 
-      const { data, error } = await Promise.race([supabaseQuery, timeoutPromise]) as any;
-
       if (!mounted.current) {
-        console.log('AuthProvider: Component unmounted, aborting fetchUserProfile');
-        fetchingProfile.current = false;
+        console.log('AuthProvider: Component unmounted during fetch');
         return;
       }
 
       if (error) {
         console.error('AuthProvider: Error fetching user profile:', error);
         
-        if (error.message.includes('Failed to fetch')) {
-          setError('Unable to connect to the server. Please check your internet connection.');
-        } else {
-          setError(`Failed to load user profile: ${error.message}`);
+        if (isNetworkError(error) && retryCount < maxRetries) {
+          console.log(`AuthProvider: Network error, retrying in ${(retryCount + 1) * 2} seconds...`);
+          await sleep((retryCount + 1) * 2000);
+          if (mounted.current) {
+            return fetchUserProfile(userId, retryCount + 1);
+          }
+          return;
         }
+        
+        if (isNetworkError(error)) {
+          setError('Unable to connect to the server. Operating in offline mode.');
+          setUser(null);
+          setIsLoading(false);
+          return;
+        }
+        
+        setError(`Failed to load user profile: ${error.message}`);
         setUser(null);
         setIsLoading(false);
       } else if (data) {
@@ -132,32 +129,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(data);
         setError(null);
         setIsLoading(false);
+        retryAttempts.current = 0;
       } else {
         console.log('AuthProvider: No user profile found for user:', userId);
         setUser(null);
         setIsLoading(false);
-        // Don't set error here as this might be expected during signup
       }
     } catch (error: any) {
       if (!mounted.current) {
-        console.log('AuthProvider: Component unmounted during fetchUserProfile error handling');
-        fetchingProfile.current = false;
+        console.log('AuthProvider: Component unmounted during error handling');
         return;
       }
       
       console.error('AuthProvider: Exception in fetchUserProfile:', error);
       
-      if (error.message.includes('Request timeout')) {
-        setError(error.message);
-      } else if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-        setError('Unable to connect to the server. Please check your internet connection.');
+      if (isNetworkError(error) && retryCount < maxRetries) {
+        console.log(`AuthProvider: Network exception, retrying in ${(retryCount + 1) * 2} seconds...`);
+        await sleep((retryCount + 1) * 2000);
+        if (mounted.current) {
+          return fetchUserProfile(userId, retryCount + 1);
+        }
+        return;
+      }
+      
+      if (isNetworkError(error)) {
+        setError('Unable to connect to the server. Operating in offline mode.');
       } else {
         setError(error.message || 'Failed to load user profile');
       }
       setUser(null);
       setIsLoading(false);
-    } finally {
-      fetchingProfile.current = false;
     }
   }, []);
 
@@ -169,11 +170,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     console.log('AuthProvider: Auth state changed - event:', event, 'userId:', session?.user?.id || 'none');
     
-    // Always update session state
     setSession(session);
     
     if (session?.user) {
-      // Only fetch profile if we don't already have it or if it's a different user
       if (!user || user.id !== session.user.id) {
         console.log('AuthProvider: User authenticated, fetching profile');
         await fetchUserProfile(session.user.id);
@@ -183,112 +182,103 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     } else {
       console.log('AuthProvider: User not authenticated, clearing user data');
-      // User is not authenticated, clear user data
       if (mounted.current) {
         setUser(null);
-        currentUserId.current = null;
         setError(null);
         setIsLoading(false);
       }
     }
   }, [fetchUserProfile, user]);
 
-  useEffect(() => {
-    // Reset initialization state when component mounts
-    initialized.current = false;
-    fetchingProfile.current = false;
-    currentUserId.current = null;
+  const initializeAuth = useCallback(async () => {
+    if (initialized.current || !mounted.current) {
+      console.log('AuthProvider: Already initialized or unmounted, skipping...');
+      return;
+    }
     
-    console.log('AuthProvider: useEffect triggered - setting up auth');
-    mounted.current = true;
+    initialized.current = true;
+    
+    try {
+      console.log('AuthProvider: Starting authentication initialization...');
 
-    const initializeAuth = async () => {
-      // Prevent duplicate initialization
-      if (initialized.current) {
-        console.log('AuthProvider: Already initialized, skipping...');
+      if (!process.env.EXPO_PUBLIC_SUPABASE_URL || !process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY) {
+        console.error('AuthProvider: Missing Supabase environment variables');
+        if (mounted.current) {
+          setError('App configuration error: Missing Supabase credentials.');
+          setIsLoading(false);
+        }
         return;
       }
+
+      console.log('AuthProvider: Getting session...');
+
+      const { data: { session }, error } = await supabase.auth.getSession();
       
-      try {
-        console.log('AuthProvider: Starting authentication initialization...');
-
-        // Check if Supabase environment variables are available
-        if (!process.env.EXPO_PUBLIC_SUPABASE_URL || !process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY) {
-          console.error('AuthProvider: Missing Supabase environment variables');
-          if (mounted.current) {
-            setError('App configuration error: Missing Supabase credentials. Please check your environment variables.');
-            setIsLoading(false);
-          }
-          return;
-        }
-
-        console.log('AuthProvider: Environment variables found, getting session...');
-
-        // Get the current session
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('AuthProvider: Error getting session:', error);
-          if (mounted.current) {
-            if (error.message.includes('Failed to fetch')) {
-              setError('Unable to connect to authentication service. Please check your internet connection.');
-            } else {
-              setError(`Authentication initialization failed: ${error.message}`);
-            }
-            setIsLoading(false);
-          }
-          return;
-        }
-
-        console.log('AuthProvider: Session retrieved - user:', session?.user?.id ? 'Found' : 'None');
-
+      if (error) {
+        console.error('AuthProvider: Error getting session:', error);
         if (mounted.current) {
-          setSession(session);
-          if (session?.user) {
-            console.log('AuthProvider: Session found, fetching user profile');
-            await fetchUserProfile(session.user.id);
+          if (isNetworkError(error)) {
+            setError('Unable to connect to authentication service. Operating in offline mode.');
           } else {
-            console.log('AuthProvider: No session found, setting loading to false');
-            setIsLoading(false);
-          }
-        }
-
-        initialized.current = true;
-        console.log('AuthProvider: Authentication initialization completed');
-      } catch (error: any) {
-        console.error('AuthProvider: Exception during auth initialization:', error);
-        if (mounted.current) {
-          if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-            setError('Unable to connect to the server. Please check your internet connection.');
-          } else {
-            setError(error.message || 'Failed to initialize authentication');
+            setError(`Authentication initialization failed: ${error.message}`);
           }
           setIsLoading(false);
         }
+        return;
       }
-    };
+
+      console.log('AuthProvider: Session retrieved - user:', session?.user?.id ? 'Found' : 'None');
+
+      if (mounted.current) {
+        setSession(session);
+        if (session?.user) {
+          console.log('AuthProvider: Session found, fetching user profile');
+          await fetchUserProfile(session.user.id);
+        } else {
+          console.log('AuthProvider: No session found, setting loading to false');
+          setIsLoading(false);
+        }
+      }
+
+      console.log('AuthProvider: Authentication initialization completed');
+    } catch (error: any) {
+      console.error('AuthProvider: Exception during auth initialization:', error);
+      if (mounted.current) {
+        if (isNetworkError(error)) {
+          setError('Unable to connect to the server. Operating in offline mode.');
+        } else {
+          setError(error.message || 'Failed to initialize authentication');
+        }
+        setIsLoading(false);
+      }
+    }
+  }, [fetchUserProfile]);
+
+  useEffect(() => {
+    console.log('AuthProvider: useEffect triggered - setting up auth');
+    mounted.current = true;
+    
+    // Prevent multiple initializations
+    if (initialized.current) {
+      console.log('AuthProvider: Already initialized, skipping setup');
+      return;
+    }
 
     console.log('AuthProvider: Setting up auth state listener');
-    // Set up auth state listener
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(handleAuthStateChange);
 
-    // Only initialize if not already done
-    if (!initialized.current) {
-      console.log('AuthProvider: Starting auth initialization');
-      initializeAuth();
-    }
+    console.log('AuthProvider: Starting auth initialization');
+    initializeAuth();
 
     return () => {
       console.log('AuthProvider: Cleanup - unmounting component');
       mounted.current = false;
-      fetchingProfile.current = false;
-      initialized.current = false;
-      currentUserId.current = null;
       subscription.unsubscribe();
+      // Don't reset initialized.current here to prevent re-initialization
     };
-  }, [fetchUserProfile, handleAuthStateChange]);
+  }, []); // Empty dependency array to prevent re-runs
 
   const signIn = async (email: string, password: string) => {
     if (!mounted.current) return;
@@ -298,7 +288,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setError(null);
     
     try {
-      // Input validation
       if (!email || !password) {
         const error = new Error('Email and password are required');
         if (mounted.current) {
@@ -338,7 +327,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw error;
       }
 
-      // Block any demo account attempts
       const lowerEmail = trimmedEmail.toLowerCase();
       if (lowerEmail.includes('demo') || lowerEmail.includes('test') || lowerEmail.includes('example')) {
         const error = new Error('Demo accounts are not allowed. Please use a real email address.');
@@ -351,7 +339,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       console.log('AuthProvider: Attempting Supabase authentication');
 
-      // Attempt authentication with Supabase
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email: lowerEmail,
         password: trimmedPassword,
@@ -360,29 +347,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (authError) {
         console.log('AuthProvider: Authentication failed:', authError.message);
         
-        // Handle specific authentication errors with user-friendly messages
         let userMessage: string;
-        switch (authError.message) {
-          case 'Invalid login credentials':
-            userMessage = 'The email or password you entered is incorrect. Please check your credentials and try again.';
-            break;
-          case 'Email not confirmed':
-            userMessage = 'Please verify your email address before signing in. Check your inbox for a confirmation email.';
-            break;
-          case 'Too many requests':
-            userMessage = 'Too many login attempts. Please wait a few minutes before trying again.';
-            break;
-          case 'User not found':
-            userMessage = 'No account found with this email address. Please check your email or create a new account.';
-            break;
-          default:
-            if (authError.message.includes('Failed to fetch')) {
-              userMessage = 'Unable to connect to the authentication service. Please check your internet connection and try again.';
-            } else if (authError.message.includes('network')) {
-              userMessage = 'Network error occurred. Please check your internet connection and try again.';
-            } else {
+        if (isNetworkError(authError)) {
+          userMessage = 'Unable to connect to authentication service. Please check your internet connection.';
+        } else {
+          switch (authError.message) {
+            case 'Invalid login credentials':
+              userMessage = 'The email or password you entered is incorrect.';
+              break;
+            case 'Email not confirmed':
+              userMessage = 'Please verify your email address before signing in.';
+              break;
+            case 'Too many requests':
+              userMessage = 'Too many login attempts. Please wait a few minutes.';
+              break;
+            case 'User not found':
+              userMessage = 'No account found with this email address.';
+              break;
+            default:
               userMessage = `Sign in failed: ${authError.message}`;
-            }
+          }
         }
         
         const error = new Error(userMessage);
@@ -404,7 +388,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       console.log('AuthProvider: Authentication successful for user:', data.user.id);
 
-      // Verify that the user has a valid profile in our database
       try {
         const { data: profileData, error: profileError } = await supabase
           .from('user_profiles')
@@ -412,11 +395,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           .eq('id', data.user.id)
           .maybeSingle();
 
-        if (profileError) {
+        if (profileError && !isNetworkError(profileError)) {
           console.error('AuthProvider: User profile verification failed:', profileError);
-          // Sign out the user if there's an error checking their profile
           await supabase.auth.signOut();
-          const error = new Error('Account verification failed. Please contact support or try creating a new account.');
+          const error = new Error('Account verification failed. Please contact support.');
           if (mounted.current) {
             setError(error.message);
             setIsLoading(false);
@@ -424,11 +406,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           throw error;
         }
 
-        if (!profileData) {
+        if (!profileData && !isNetworkError(profileError)) {
           console.error('AuthProvider: User profile not found for authenticated user');
-          // Sign out the user if they don't have a valid profile
           await supabase.auth.signOut();
-          const error = new Error('Account setup incomplete. Please contact support or try creating a new account.');
+          const error = new Error('Account setup incomplete. Please contact support.');
           if (mounted.current) {
             setError(error.message);
             setIsLoading(false);
@@ -438,23 +419,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         console.log('AuthProvider: User profile verification successful');
       } catch (profileError: any) {
-        console.error('AuthProvider: Profile verification error:', profileError);
-        // Sign out the user on any profile verification error
-        await supabase.auth.signOut();
-        const error = new Error('Account verification failed. Please try again or contact support.');
-        if (mounted.current) {
-          setError(error.message);
-          setIsLoading(false);
+        if (!isNetworkError(profileError)) {
+          console.error('AuthProvider: Profile verification error:', profileError);
+          await supabase.auth.signOut();
+          const error = new Error('Account verification failed. Please try again.');
+          if (mounted.current) {
+            setError(error.message);
+            setIsLoading(false);
+          }
+          throw error;
         }
-        throw error;
+        // If it's a network error, continue with authentication
+        console.log('AuthProvider: Network error during profile verification, continuing...');
       }
 
       console.log('AuthProvider: Sign in process completed successfully');
       
-      // The auth state change listener will handle updating the user profile
-      
     } catch (error: any) {
-      // Don't log authentication failures as errors - they're expected user behavior
       if (error.message.includes('email or password') || error.message.includes('Invalid login credentials')) {
         console.log('AuthProvider: Sign in failed - invalid credentials provided');
       } else {
@@ -483,7 +464,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log('AuthProvider: Starting real user signup process...');
 
-      // Strict validation for real user data
       if (!userData.firstName.trim() || !userData.lastName.trim()) {
         throw new Error('First name and last name are required');
       }
@@ -496,7 +476,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error('Please enter a valid email address');
       }
 
-      // Block demo email addresses
       const lowerEmail = userData.email.trim().toLowerCase();
       if (lowerEmail.includes('demo') || lowerEmail.includes('test') || lowerEmail.includes('example')) {
         throw new Error('Demo email addresses are not allowed. Please use a real email address.');
@@ -510,7 +489,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error('Phone number is required');
       }
 
-      // Validate phone number format (basic validation)
       const phoneDigits = userData.phone.replace(/\D/g, '');
       if (phoneDigits.length !== 10) {
         throw new Error('Please enter a valid 10-digit phone number');
@@ -520,7 +498,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error('Birth date is required');
       }
 
-      // Validate birth date format and age
       const dateRegex = /^(0[1-9]|1[0-2])\/(0[1-9]|[12]\d|3[01])\/\d{4}$/;
       if (!dateRegex.test(userData.birthDate)) {
         throw new Error('Please enter birth date in MM/DD/YYYY format');
@@ -551,12 +528,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       console.log('AuthProvider: Creating new user account...');
 
-      // Create auth user - ONLY real accounts allowed
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: lowerEmail,
         password: userData.password,
         options: {
-          emailRedirectTo: undefined, // Disable email confirmation for now
+          emailRedirectTo: undefined,
           data: {
             first_name: userData.firstName.trim(),
             last_name: userData.lastName.trim(),
@@ -571,7 +547,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           throw new Error('This email is already registered. Please sign in or use a different email.');
         }
         
-        if (authError.message.includes('Failed to fetch')) {
+        if (isNetworkError(authError)) {
           throw new Error('Unable to connect to authentication service. Please check your internet connection.');
         }
 
@@ -588,7 +564,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       console.log('AuthProvider: Auth user created successfully:', authData.user.id);
 
-      // Convert MM/DD/YYYY to YYYY-MM-DD format for database
       const formatDateForDB = (dateString: string) => {
         const [month, day, year] = dateString.split('/');
         return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
@@ -611,7 +586,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       console.log('AuthProvider: Creating user profile...');
 
-      // Create user profile with retry logic
       let profileResult;
       let profileError;
       let retries = 3;
@@ -631,31 +605,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         profileError = error;
         retries--;
         
-        if (retries > 0) {
+        if (retries > 0 && isNetworkError(error)) {
           console.log(`AuthProvider: Profile creation failed, retrying... (${retries} attempts left)`);
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await sleep(1000);
+        } else {
+          break;
         }
       }
 
       if (profileError) {
         console.error('AuthProvider: Error creating user profile:', profileError);
 
-        // Handle duplicate key constraint violation (user profile already exists)
         if (profileError.code === '23505') {
           console.log('AuthProvider: User profile already exists, treating as successful signup');
-          // Profile already exists, this is not a fatal error
-          // The auth state change listener will handle updating the user profile
           return;
         }
 
-        // Clean up the auth user if profile creation fails
-        try {
-          await supabase.auth.admin.deleteUser(authData.user.id);
-        } catch (cleanupError) {
-          console.error('AuthProvider: Failed to clean up auth user:', cleanupError);
+        if (!isNetworkError(profileError)) {
+          try {
+            await supabase.auth.admin.deleteUser(authData.user.id);
+          } catch (cleanupError) {
+            console.error('AuthProvider: Failed to clean up auth user:', cleanupError);
+          }
         }
         
-        if (profileError.message?.includes('Failed to fetch')) {
+        if (isNetworkError(profileError)) {
           throw new Error('Unable to connect to the database. Please check your internet connection.');
         }
         
@@ -663,8 +637,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       console.log('AuthProvider: Real user account created successfully:', profileResult);
-
-      // The auth state change listener will handle updating the user profile
 
     } catch (error: any) {
       console.error('AuthProvider: Signup error:', error);
@@ -688,20 +660,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setError(null);
     
     try {
-      // Clear local state first
       setUser(null);
       setSession(null);
-      currentUserId.current = null;
       
-      // Sign out from Supabase
       const { error } = await supabase.auth.signOut();
       
       if (error) {
         console.error('AuthProvider: Supabase sign out error:', error);
-        if (!error.message.includes('Failed to fetch')) {
+        if (!isNetworkError(error)) {
           throw error;
         }
-        // If it's a network error, we've already cleared local state
         console.log('AuthProvider: Network error during sign out, but local state cleared');
       }
       
@@ -711,15 +679,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error: any) {
       console.error('AuthProvider: Sign out error:', error);
       if (mounted.current) {
-        if (error.message.includes('Failed to fetch')) {
+        if (isNetworkError(error)) {
           setError('Network error during sign out, but you have been signed out locally.');
         } else {
           setError(error.message || 'Failed to sign out');
         }
-        // Even if there's an error, ensure local state is cleared
         setUser(null);
         setSession(null);
-        currentUserId.current = null;
       }
       throw error;
     } finally {
@@ -737,7 +703,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setError(null);
     
     try {
-      // Validate update data
       if (userData.first_name && userData.first_name.trim().length < 2) {
         throw new Error('First name must be at least 2 characters long');
       }
@@ -761,7 +726,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         .single();
 
       if (error) {
-        if (error.message.includes('Failed to fetch')) {
+        if (isNetworkError(error)) {
           throw new Error('Unable to connect to the database. Please check your internet connection.');
         }
         throw error;
@@ -796,7 +761,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error('Please enter a valid email address');
       }
 
-      // Block demo email addresses
       const lowerEmail = email.trim().toLowerCase();
       if (lowerEmail.includes('demo') || lowerEmail.includes('test') || lowerEmail.includes('example')) {
         throw new Error('Demo email addresses are not supported. Please use a real email address.');
@@ -807,7 +771,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       if (error) {
-        if (error.message.includes('Failed to fetch')) {
+        if (isNetworkError(error)) {
           throw new Error('Unable to connect to authentication service. Please check your internet connection.');
         }
         throw error;
