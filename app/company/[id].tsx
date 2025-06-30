@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   Modal,
   Alert,
+  Animated,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -337,6 +338,200 @@ const LiveMoodSection = ({ companyId, companyName }: { companyId: string; compan
   );
 };
 
+const ToxicBlueHeartReaction = ({ 
+  postId, 
+  postType 
+}: { 
+  postId: string; 
+  postType: 'review' | 'claim';
+}) => {
+  const { user } = useAuth();
+  const [reactionData, setReactionData] = useState<ReactionData>({
+    count: Math.floor(Math.random() * 50) + 5, // Random initial count between 5-55
+    userReacted: false,
+  });
+  const [isAnimating, setIsAnimating] = useState(false);
+  const scaleAnim = new Animated.Value(1);
+  const heartAnim = new Animated.Value(1);
+
+  // Load user's existing reaction when component mounts
+  useEffect(() => {
+    loadUserReaction();
+  }, [postId, user]);
+
+  const loadUserReaction = async () => {
+    if (!user) return;
+    
+    try {
+      const storageKey = `toxic_heart_${postType}_${postId}_${user.id}`;
+      let existingReaction: string | null = null;
+      
+      if (Platform.OS === 'web') {
+        existingReaction = localStorage.getItem(storageKey);
+      } else {
+        existingReaction = await AsyncStorage.getItem(storageKey);
+      }
+      
+      if (existingReaction) {
+        const reactionInfo = JSON.parse(existingReaction);
+        setReactionData(prev => ({
+          ...prev,
+          userReacted: reactionInfo.reacted,
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading user reaction:', error);
+    }
+  };
+
+  const saveUserReaction = async (reacted: boolean) => {
+    if (!user) return;
+    
+    try {
+      const storageKey = `toxic_heart_${postType}_${postId}_${user.id}`;
+      
+      if (!reacted) {
+        if (Platform.OS === 'web') {
+          localStorage.removeItem(storageKey);
+        } else {
+          await AsyncStorage.removeItem(storageKey);
+        }
+      } else {
+        const reactionInfo = {
+          reacted,
+          timestamp: new Date().toISOString(),
+          postId,
+          postType,
+          userId: user.id,
+        };
+        if (Platform.OS === 'web') {
+          localStorage.setItem(storageKey, JSON.stringify(reactionInfo));
+        } else {
+          await AsyncStorage.setItem(storageKey, JSON.stringify(reactionInfo));
+        }
+      }
+    } catch (error) {
+      console.error('Error saving user reaction:', error);
+    }
+  };
+
+  const animateHeart = (liked: boolean) => {
+    if (liked) {
+      // Instagram-like heart animation when liking
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(heartAnim, {
+            toValue: 1.3,
+            duration: 150,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scaleAnim, {
+            toValue: 0.95,
+            duration: 150,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.parallel([
+          Animated.timing(heartAnim, {
+            toValue: 1,
+            duration: 150,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scaleAnim, {
+            toValue: 1,
+            duration: 150,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]).start();
+    } else {
+      // Subtle animation when unliking
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 0.9,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  };
+
+  const handleReaction = async () => {
+    if (!user) {
+      Alert.alert('Sign In Required', 'Please sign in to react to posts.');
+      return;
+    }
+
+    if (isAnimating) return;
+
+    setIsAnimating(true);
+
+    try {
+      const newReacted = !reactionData.userReacted;
+      const newCount = newReacted ? reactionData.count + 1 : reactionData.count - 1;
+
+      // Animate immediately for better UX
+      animateHeart(newReacted);
+
+      setReactionData({
+        count: newCount,
+        userReacted: newReacted,
+      });
+
+      await saveUserReaction(newReacted);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+    } catch (error) {
+      console.error('Failed to submit reaction:', error);
+      // Revert on error
+      setReactionData(prev => ({
+        count: prev.userReacted ? prev.count - 1 : prev.count + 1,
+        userReacted: !prev.userReacted,
+      }));
+    } finally {
+      setTimeout(() => setIsAnimating(false), 300);
+    }
+  };
+
+  return (
+    <View style={styles.instagramReactionContainer}>
+      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+        <TouchableOpacity 
+          style={styles.instagramHeartButton}
+          onPress={handleReaction}
+          disabled={isAnimating}
+          activeOpacity={0.7}
+        >
+          <Animated.View style={{ transform: [{ scale: heartAnim }] }}>
+            <Heart 
+              size={24} 
+              color={reactionData.userReacted ? '#00BFFF' : '#666666'} 
+              fill={reactionData.userReacted ? '#00BFFF' : 'transparent'}
+              strokeWidth={reactionData.userReacted ? 0 : 2}
+            />
+          </Animated.View>
+        </TouchableOpacity>
+      </Animated.View>
+      
+      <TouchableOpacity onPress={handleReaction} disabled={isAnimating}>
+        <Text style={[
+          styles.instagramHeartCount,
+          reactionData.userReacted && styles.instagramHeartCountActive
+        ]}>
+          {reactionData.count.toLocaleString()} likes
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
 interface ActionModalProps {
   visible: boolean;
   onClose: () => void;
@@ -411,142 +606,6 @@ const ActionModal = ({ visible, onClose, companyName, onStartChat, onWriteReview
   );
 };
 
-const ToxicBlueHeartReaction = ({ 
-  postId, 
-  postType 
-}: { 
-  postId: string; 
-  postType: 'review' | 'claim';
-}) => {
-  const { user } = useAuth();
-  const [reactionData, setReactionData] = useState<ReactionData>({
-    count: Math.floor(Math.random() * 50) + 5, // Random initial count between 5-55
-    userReacted: false,
-  });
-  const [isAnimating, setIsAnimating] = useState(false);
-
-  // Load user's existing reaction when component mounts
-  useEffect(() => {
-    loadUserReaction();
-  }, [postId, user]);
-
-  const loadUserReaction = async () => {
-    if (!user) return;
-    
-    try {
-      const storageKey = `toxic_heart_${postType}_${postId}_${user.id}`;
-      let existingReaction: string | null = null;
-      
-      if (Platform.OS === 'web') {
-        existingReaction = localStorage.getItem(storageKey);
-      } else {
-        existingReaction = await AsyncStorage.getItem(storageKey);
-      }
-      
-      if (existingReaction) {
-        const reactionInfo = JSON.parse(existingReaction);
-        setReactionData(prev => ({
-          ...prev,
-          userReacted: reactionInfo.reacted,
-        }));
-      }
-    } catch (error) {
-      console.error('Error loading user reaction:', error);
-    }
-  };
-
-  const saveUserReaction = async (reacted: boolean) => {
-    if (!user) return;
-    
-    try {
-      const storageKey = `toxic_heart_${postType}_${postId}_${user.id}`;
-      
-      if (!reacted) {
-        if (Platform.OS === 'web') {
-          localStorage.removeItem(storageKey);
-        } else {
-          await AsyncStorage.removeItem(storageKey);
-        }
-      } else {
-        const reactionInfo = {
-          reacted,
-          timestamp: new Date().toISOString(),
-          postId,
-          postType,
-          userId: user.id,
-        };
-        if (Platform.OS === 'web') {
-          localStorage.setItem(storageKey, JSON.stringify(reactionInfo));
-        } else {
-          await AsyncStorage.setItem(storageKey, JSON.stringify(reactionInfo));
-        }
-      }
-    } catch (error) {
-      console.error('Error saving user reaction:', error);
-    }
-  };
-
-  const handleReaction = async () => {
-    if (!user) {
-      Alert.alert('Sign In Required', 'Please sign in to react to posts.');
-      return;
-    }
-
-    if (isAnimating) return;
-
-    setIsAnimating(true);
-
-    try {
-      const newReacted = !reactionData.userReacted;
-      const newCount = newReacted ? reactionData.count + 1 : reactionData.count - 1;
-
-      setReactionData({
-        count: newCount,
-        userReacted: newReacted,
-      });
-
-      await saveUserReaction(newReacted);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-    } catch (error) {
-      console.error('Failed to submit reaction:', error);
-      // Revert on error
-      setReactionData(prev => ({
-        count: prev.userReacted ? prev.count - 1 : prev.count + 1,
-        userReacted: !prev.userReacted,
-      }));
-    } finally {
-      setTimeout(() => setIsAnimating(false), 300);
-    }
-  };
-
-  return (
-    <TouchableOpacity 
-      style={[
-        styles.toxicHeartButton,
-        reactionData.userReacted && styles.toxicHeartButtonActive,
-        isAnimating && styles.toxicHeartButtonAnimating
-      ]}
-      onPress={handleReaction}
-      disabled={isAnimating}
-    >
-      <Heart 
-        size={18} 
-        color={reactionData.userReacted ? '#FFFFFF' : '#00BFFF'} 
-        fill={reactionData.userReacted ? '#FFFFFF' : 'transparent'}
-      />
-      <Text style={[
-        styles.toxicHeartCount,
-        reactionData.userReacted && styles.toxicHeartCountActive
-      ]}>
-        {reactionData.count}
-      </Text>
-    </TouchableOpacity>
-  );
-};
-
 const ReviewCard = ({ review }: { review: CompanyReview }) => {
   const getTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
@@ -592,7 +651,7 @@ const ReviewCard = ({ review }: { review: CompanyReview }) => {
       <Text style={styles.reviewTitle}>{review.title}</Text>
       <Text style={styles.reviewContent}>{review.content}</Text>
 
-      {/* Toxic Blue Heart Reaction */}
+      {/* Instagram-style Toxic Blue Heart Reaction */}
       <View style={styles.postReactions}>
         <ToxicBlueHeartReaction postId={review.id} postType="review" />
       </View>
@@ -688,7 +747,7 @@ const ClaimCard = ({ claim }: { claim: CompanyClaim }) => {
         </View>
       )}
 
-      {/* Toxic Blue Heart Reaction */}
+      {/* Instagram-style Toxic Blue Heart Reaction */}
       <View style={styles.postReactions}>
         <ToxicBlueHeartReaction postId={claim.id} postType="claim" />
       </View>
@@ -1486,39 +1545,27 @@ const styles = StyleSheet.create({
     color: '#CCCCCC',
     lineHeight: 20,
   },
-  // Toxic Blue Heart Reaction Styles
+  // Instagram-style Toxic Blue Heart Reaction Styles
   postReactions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 12,
+    marginTop: 16,
     paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#2A2A2A',
+    borderTopWidth: 0.5,
+    borderTopColor: '#333333',
   },
-  toxicHeartButton: {
+  instagramReactionContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: '#00BFFF',
-    backgroundColor: 'transparent',
+    gap: 8,
   },
-  toxicHeartButtonActive: {
-    backgroundColor: '#00BFFF',
-    borderColor: '#00BFFF',
+  instagramHeartButton: {
+    padding: 4,
   },
-  toxicHeartButtonAnimating: {
-    transform: [{ scale: 0.95 }],
-  },
-  toxicHeartCount: {
+  instagramHeartCount: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#00BFFF',
-  },
-  toxicHeartCountActive: {
     color: '#FFFFFF',
+  },
+  instagramHeartCountActive: {
+    color: '#00BFFF',
   },
 });
