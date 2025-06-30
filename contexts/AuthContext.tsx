@@ -79,11 +79,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log('AuthProvider: Making Supabase query for user profile');
       
-      const { data, error } = await supabase
+      // Create a timeout promise that rejects after 10 seconds
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Request timeout: Unable to fetch user profile. Please check your internet connection.'));
+        }, 10000);
+      });
+
+      // Race the Supabase query against the timeout
+      const supabaseQuery = supabase
         .from('user_profiles')
         .select('*')
         .eq('id', userId)
         .maybeSingle();
+
+      const { data, error } = await Promise.race([supabaseQuery, timeoutPromise]) as any;
 
       if (!mounted.current) {
         console.log('AuthProvider: Component unmounted, aborting fetchUserProfile');
@@ -119,7 +129,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       console.error('AuthProvider: Exception in fetchUserProfile:', error);
       
-      if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+      if (error.message.includes('Request timeout')) {
+        setError(error.message);
+      } else if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
         setError('Unable to connect to the server. Please check your internet connection.');
       } else {
         setError(error.message || 'Failed to load user profile');
