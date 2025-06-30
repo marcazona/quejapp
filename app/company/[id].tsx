@@ -34,24 +34,309 @@ interface LiveMoodData {
 
 interface Comment {
   id: string;
-  postId: string;
-  postType: 'review' | 'claim';
-  userId: string;
-  userName: string;
-  userAvatar: string | null;
+  user_id: string;
   content: string;
-  likes: number;
-  isLiked: boolean;
-  createdAt: string;
-  replies?: Comment[];
+  likes_count: number;
+  created_at: string;
+  user_profiles: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    avatar_url: string | null;
+    verified: boolean | null;
+  };
+  user_reaction?: 'like' | null;
 }
 
-interface PostReaction {
+interface CommentsModalProps {
+  visible: boolean;
+  onClose: () => void;
   postId: string;
   postType: 'review' | 'claim';
-  isLiked: boolean;
-  likeCount: number;
+  postTitle: string;
+  postAuthor: {
+    first_name: string;
+    last_name: string;
+    avatar_url: string | null;
+    verified: boolean | null;
+  };
+  company: {
+    name: string;
+    logo_url: string | null;
+  };
 }
+
+const CommentsModal = ({ visible, onClose, postId, postType, postTitle, postAuthor, company }: CommentsModalProps) => {
+  const { user } = useAuth();
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  // Mock comments data
+  const mockComments: Comment[] = [
+    {
+      id: '1',
+      user_id: 'user1',
+      content: 'Thanks for sharing this! Very helpful information.',
+      likes_count: 5,
+      created_at: new Date(Date.now() - 3600000).toISOString(),
+      user_profiles: {
+        id: 'user1',
+        first_name: 'Alex',
+        last_name: 'Thompson',
+        avatar_url: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=100&h=100',
+        verified: true,
+      },
+    },
+    {
+      id: '2',
+      user_id: 'user2',
+      content: 'I had a similar experience. Great to see this being addressed.',
+      likes_count: 3,
+      created_at: new Date(Date.now() - 7200000).toISOString(),
+      user_profiles: {
+        id: 'user2',
+        first_name: 'Maria',
+        last_name: 'Garcia',
+        avatar_url: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=100&h=100',
+        verified: false,
+      },
+    },
+    {
+      id: '3',
+      user_id: 'user3',
+      content: 'Hope this gets resolved quickly. Keep us updated!',
+      likes_count: 8,
+      created_at: new Date(Date.now() - 10800000).toISOString(),
+      user_profiles: {
+        id: 'user3',
+        first_name: 'David',
+        last_name: 'Kim',
+        avatar_url: 'https://images.pexels.com/photos/1036622/pexels-photo-1036622.jpeg?auto=compress&cs=tinysrgb&w=100&h=100',
+        verified: true,
+      },
+    },
+  ];
+
+  useEffect(() => {
+    if (visible) {
+      setComments(mockComments);
+    }
+  }, [visible]);
+
+  const handleLikeComment = (commentId: string) => {
+    setComments(prevComments =>
+      prevComments.map(comment => {
+        if (comment.id === commentId) {
+          const isLiked = comment.user_reaction === 'like';
+          return {
+            ...comment,
+            likes_count: isLiked ? comment.likes_count - 1 : comment.likes_count + 1,
+            user_reaction: isLiked ? null : 'like' as const,
+          };
+        }
+        return comment;
+      })
+    );
+  };
+
+  const handleSubmitComment = () => {
+    if (!newComment.trim() || !user) return;
+
+    const comment: Comment = {
+      id: Date.now().toString(),
+      user_id: user.id,
+      content: newComment.trim(),
+      likes_count: 0,
+      created_at: new Date().toISOString(),
+      user_profiles: {
+        id: user.id,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        avatar_url: user.avatar_url,
+        verified: user.verified,
+      },
+    };
+
+    setComments(prev => [comment, ...prev]);
+    setNewComment('');
+  };
+
+  const getTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffHours < 1) return 'now';
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  const getSeparatorEmoji = () => {
+    return postType === 'review' ? '😊' : '😠';
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
+      <SafeAreaView style={styles.modalContainer}>
+        {/* Modal Header */}
+        <View style={styles.modalHeader}>
+          <TouchableOpacity onPress={onClose} style={styles.modalCloseButton}>
+            <X size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          
+          <Text style={styles.modalTitle}>Comments</Text>
+          
+          <View style={styles.modalPlaceholder} />
+        </View>
+
+        {/* Post Author and Company Info */}
+        <View style={styles.postInfoHeader}>
+          <View style={styles.postInfoContent}>
+            {/* Post Author */}
+            <View style={styles.authorInfo}>
+              {postAuthor.avatar_url ? (
+                <Image source={{ uri: postAuthor.avatar_url }} style={styles.authorAvatar} />
+              ) : (
+                <View style={styles.authorAvatarPlaceholder}>
+                  <User size={16} color="#666666" />
+                </View>
+              )}
+              <View style={styles.authorDetails}>
+                <View style={styles.authorNameRow}>
+                  <Text style={styles.authorName}>
+                    {postAuthor.first_name} {postAuthor.last_name}
+                  </Text>
+                  {postAuthor.verified && (
+                    <Shield size={12} color="#27AE60" />
+                  )}
+                </View>
+              </View>
+            </View>
+
+            {/* Separator Emoji */}
+            <Text style={styles.separatorEmoji}>{getSeparatorEmoji()}</Text>
+
+            {/* Company Info */}
+            <View style={styles.companyInfo}>
+              {company.logo_url ? (
+                <Image source={{ uri: company.logo_url }} style={styles.companyLogo} />
+              ) : (
+                <View style={styles.companyLogoPlaceholder}>
+                  <Building2 size={16} color="#666666" />
+                </View>
+              )}
+              <Text style={styles.companyName}>{company.name}</Text>
+            </View>
+          </View>
+
+          {/* Post Title */}
+          <Text style={styles.postTitle} numberOfLines={2}>
+            {postTitle}
+          </Text>
+        </View>
+
+        {/* Comments List */}
+        <ScrollView style={styles.commentsList} showsVerticalScrollIndicator={false}>
+          {comments.map((comment) => (
+            <View key={comment.id} style={styles.commentItem}>
+              <View style={styles.commentHeader}>
+                <View style={styles.commentUserInfo}>
+                  {comment.user_profiles.avatar_url ? (
+                    <Image source={{ uri: comment.user_profiles.avatar_url }} style={styles.commentAvatar} />
+                  ) : (
+                    <View style={styles.commentAvatarPlaceholder}>
+                      <User size={16} color="#666666" />
+                    </View>
+                  )}
+                  
+                  <View style={styles.commentUserDetails}>
+                    <View style={styles.commentUserNameRow}>
+                      <Text style={styles.commentUserName}>
+                        {comment.user_profiles.first_name} {comment.user_profiles.last_name}
+                      </Text>
+                      {comment.user_profiles.verified && (
+                        <Shield size={10} color="#27AE60" />
+                      )}
+                    </View>
+                    <Text style={styles.commentTime}>{getTimeAgo(comment.created_at)}</Text>
+                  </View>
+                </View>
+              </View>
+
+              <Text style={styles.commentContent}>{comment.content}</Text>
+
+              <View style={styles.commentActions}>
+                <TouchableOpacity 
+                  style={styles.commentLikeButton}
+                  onPress={() => handleLikeComment(comment.id)}
+                >
+                  <Heart 
+                    size={16} 
+                    color={comment.user_reaction === 'like' ? "#5ce1e6" : "#666666"} 
+                    fill={comment.user_reaction === 'like' ? "#5ce1e6" : "transparent"}
+                  />
+                  <Text style={[
+                    styles.commentLikeText,
+                    comment.user_reaction === 'like' && styles.commentLikeTextActive
+                  ]}>
+                    {comment.likes_count}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+
+          {comments.length === 0 && (
+            <View style={styles.emptyComments}>
+              <MessageCircle size={48} color="#666666" />
+              <Text style={styles.emptyCommentsTitle}>No comments yet</Text>
+              <Text style={styles.emptyCommentsText}>
+                Be the first to share your thoughts!
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+
+        {/* Comment Input */}
+        {user && (
+          <View style={styles.commentInputContainer}>
+            <View style={styles.commentInputRow}>
+              {user.avatar_url ? (
+                <Image source={{ uri: user.avatar_url }} style={styles.inputUserAvatar} />
+              ) : (
+                <View style={styles.inputUserAvatarPlaceholder}>
+                  <User size={16} color="#666666" />
+                </View>
+              )}
+              
+              <TextInput
+                style={styles.commentInput}
+                value={newComment}
+                onChangeText={setNewComment}
+                placeholder="Add a comment..."
+                placeholderTextColor="#666666"
+                multiline
+                maxLength={500}
+              />
+              
+              <TouchableOpacity 
+                style={[styles.sendButton, !newComment.trim() && styles.sendButtonDisabled]}
+                onPress={handleSubmitComment}
+                disabled={!newComment.trim()}
+              >
+                <Send size={16} color={newComment.trim() ? "#5ce1e6" : "#666666"} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      </SafeAreaView>
+    </Modal>
+  );
+};
 
 const LiveMoodSection = ({ companyId, companyName }: { companyId: string; companyName: string }) => {
   const { user } = useAuth();
@@ -428,376 +713,10 @@ const ActionModal = ({ visible, onClose, companyName, onStartChat, onWriteReview
   );
 };
 
-const CommentsModal = ({ 
-  visible, 
-  onClose, 
-  postId, 
-  postType, 
-  postTitle 
-}: {
-  visible: boolean;
-  onClose: () => void;
-  postId: string;
-  postType: 'review' | 'claim';
-  postTitle: string;
-}) => {
-  const { user } = useAuth();
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [newComment, setNewComment] = useState('');
-  const [replyingTo, setReplyingTo] = useState<string | null>(null);
-
-  // Mock comments data
-  useEffect(() => {
-    const mockComments: Comment[] = [
-      {
-        id: '1',
-        postId,
-        postType,
-        userId: 'user1',
-        userName: 'Alex Johnson',
-        userAvatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=100&h=100',
-        content: 'I had a similar experience! Thanks for sharing.',
-        likes: 5,
-        isLiked: false,
-        createdAt: new Date(Date.now() - 3600000).toISOString(),
-        replies: [
-          {
-            id: '2',
-            postId,
-            postType,
-            userId: 'user2',
-            userName: 'Maria Garcia',
-            userAvatar: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=100&h=100',
-            content: '@Alex Johnson Totally agree! Their service has improved a lot.',
-            likes: 2,
-            isLiked: true,
-            createdAt: new Date(Date.now() - 1800000).toISOString(),
-          }
-        ]
-      },
-      {
-        id: '3',
-        postId,
-        postType,
-        userId: 'user3',
-        userName: 'David Chen',
-        userAvatar: 'https://images.pexels.com/photos/1036622/pexels-photo-1036622.jpeg?auto=compress&cs=tinysrgb&w=100&h=100',
-        content: 'Hope they resolve this issue soon. Keep us updated!',
-        likes: 8,
-        isLiked: false,
-        createdAt: new Date(Date.now() - 7200000).toISOString(),
-      }
-    ];
-    setComments(mockComments);
-  }, [postId, postType]);
-
-  const handleLikeComment = (commentId: string, isReply: boolean = false, parentId?: string) => {
-    setComments(prevComments => 
-      prevComments.map(comment => {
-        if (!isReply && comment.id === commentId) {
-          return {
-            ...comment,
-            isLiked: !comment.isLiked,
-            likes: comment.isLiked ? comment.likes - 1 : comment.likes + 1
-          };
-        }
-        
-        if (isReply && comment.id === parentId && comment.replies) {
-          return {
-            ...comment,
-            replies: comment.replies.map(reply => 
-              reply.id === commentId 
-                ? {
-                    ...reply,
-                    isLiked: !reply.isLiked,
-                    likes: reply.isLiked ? reply.likes - 1 : reply.likes + 1
-                  }
-                : reply
-            )
-          };
-        }
-        
-        return comment;
-      })
-    );
-  };
-
-  const handleAddComment = () => {
-    if (!newComment.trim() || !user) return;
-
-    const comment: Comment = {
-      id: Date.now().toString(),
-      postId,
-      postType,
-      userId: user.id,
-      userName: `${user.first_name} ${user.last_name}`,
-      userAvatar: user.avatar_url,
-      content: newComment.trim(),
-      likes: 0,
-      isLiked: false,
-      createdAt: new Date().toISOString(),
-    };
-
-    if (replyingTo) {
-      // Add as reply
-      setComments(prevComments =>
-        prevComments.map(c => 
-          c.id === replyingTo 
-            ? { ...c, replies: [...(c.replies || []), comment] }
-            : c
-        )
-      );
-      setReplyingTo(null);
-    } else {
-      // Add as new comment
-      setComments(prevComments => [comment, ...prevComments]);
-    }
-
-    setNewComment('');
-  };
-
-  const getTimeAgo = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffHours / 24);
-    
-    if (diffHours < 1) return 'now';
-    if (diffHours < 24) return `${diffHours}h`;
-    if (diffDays < 7) return `${diffDays}d`;
-    return date.toLocaleDateString();
-  };
-
-  const CommentItem = ({ comment, isReply = false, parentId }: { 
-    comment: Comment; 
-    isReply?: boolean; 
-    parentId?: string;
-  }) => (
-    <View style={[styles.commentItem, isReply && styles.replyItem]}>
-      <View style={styles.commentHeader}>
-        <View style={styles.commentUserInfo}>
-          {comment.userAvatar ? (
-            <Image source={{ uri: comment.userAvatar }} style={styles.commentAvatar} />
-          ) : (
-            <View style={styles.commentAvatarPlaceholder}>
-              <User size={16} color="#666666" />
-            </View>
-          )}
-          <View style={styles.commentUserDetails}>
-            <Text style={styles.commentUserName}>{comment.userName}</Text>
-            <Text style={styles.commentTime}>{getTimeAgo(comment.createdAt)}</Text>
-          </View>
-        </View>
-      </View>
-      
-      <Text style={styles.commentContent}>{comment.content}</Text>
-      
-      <View style={styles.commentActions}>
-        <TouchableOpacity 
-          style={styles.commentLikeButton}
-          onPress={() => handleLikeComment(comment.id, isReply, parentId)}
-        >
-          <Heart 
-            size={16} 
-            color={comment.isLiked ? '#00D4FF' : '#666666'} 
-            fill={comment.isLiked ? '#00D4FF' : 'transparent'}
-          />
-          {comment.likes > 0 && (
-            <Text style={[styles.commentLikeCount, comment.isLiked && styles.commentLikeCountActive]}>
-              {comment.likes}
-            </Text>
-          )}
-        </TouchableOpacity>
-        
-        {!isReply && (
-          <TouchableOpacity 
-            style={styles.commentReplyButton}
-            onPress={() => {
-              setReplyingTo(comment.id);
-              setNewComment(`@${comment.userName} `);
-            }}
-          >
-            <Text style={styles.commentReplyText}>Reply</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-      
-      {comment.replies && comment.replies.length > 0 && (
-        <View style={styles.repliesContainer}>
-          {comment.replies.map(reply => (
-            <CommentItem 
-              key={reply.id} 
-              comment={reply} 
-              isReply={true} 
-              parentId={comment.id}
-            />
-          ))}
-        </View>
-      )}
-    </View>
-  );
-
-  return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
-    >
-      <SafeAreaView style={styles.commentsModalContainer}>
-        <View style={styles.commentsModalHeader}>
-          <TouchableOpacity onPress={onClose} style={styles.commentsModalCloseButton}>
-            <X size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          
-          <Text style={styles.commentsModalTitle}>Comments</Text>
-          
-          <View style={styles.modalPlaceholder} />
-        </View>
-
-        <View style={styles.commentsModalSubHeader}>
-          <Text style={styles.commentsPostTitle} numberOfLines={2}>{postTitle}</Text>
-          <Text style={styles.commentsCount}>{comments.reduce((total, comment) => total + 1 + (comment.replies?.length || 0), 0)} comments</Text>
-        </View>
-
-        <ScrollView style={styles.commentsContainer} showsVerticalScrollIndicator={false}>
-          {comments.map(comment => (
-            <CommentItem key={comment.id} comment={comment} />
-          ))}
-          
-          {comments.length === 0 && (
-            <View style={styles.noCommentsContainer}>
-              <MessageCircle size={48} color="#666666" />
-              <Text style={styles.noCommentsTitle}>No comments yet</Text>
-              <Text style={styles.noCommentsText}>Be the first to share your thoughts!</Text>
-            </View>
-          )}
-        </ScrollView>
-
-        <View style={styles.commentInputContainer}>
-          {replyingTo && (
-            <View style={styles.replyingToContainer}>
-              <Text style={styles.replyingToText}>
-                Replying to {comments.find(c => c.id === replyingTo)?.userName}
-              </Text>
-              <TouchableOpacity onPress={() => {
-                setReplyingTo(null);
-                setNewComment('');
-              }}>
-                <X size={16} color="#666666" />
-              </TouchableOpacity>
-            </View>
-          )}
-          
-          <View style={styles.commentInputRow}>
-            {user?.avatar_url ? (
-              <Image source={{ uri: user.avatar_url }} style={styles.commentInputAvatar} />
-            ) : (
-              <View style={styles.commentInputAvatarPlaceholder}>
-                <User size={20} color="#666666" />
-              </View>
-            )}
-            
-            <TextInput
-              style={styles.commentInput}
-              placeholder="Add a comment..."
-              placeholderTextColor="#666666"
-              value={newComment}
-              onChangeText={setNewComment}
-              multiline
-              maxLength={500}
-            />
-            
-            <TouchableOpacity 
-              style={[styles.commentSendButton, !newComment.trim() && styles.commentSendButtonDisabled]}
-              onPress={handleAddComment}
-              disabled={!newComment.trim()}
-            >
-              <Send size={18} color={newComment.trim() ? '#00D4FF' : '#666666'} />
-            </TouchableOpacity>
-          </View>
-        </View>
-      </SafeAreaView>
-    </Modal>
-  );
-};
-
-const ReviewCard = ({ review }: { review: CompanyReview }) => {
-  const { user } = useAuth();
+const ReviewCard = ({ review, company }: { review: CompanyReview; company: FullCompanyProfile }) => {
   const [showComments, setShowComments] = useState(false);
-  const [reactions, setReactions] = useState<PostReaction>({
-    postId: review.id,
-    postType: 'review',
-    isLiked: false,
-    likeCount: Math.floor(Math.random() * 50) + 10, // Random initial likes
-  });
-
-  // Load saved reactions from localStorage
-  useEffect(() => {
-    loadReactions();
-  }, [review.id, user]);
-
-  const loadReactions = async () => {
-    if (!user) return;
-    
-    try {
-      const storageKey = `post_reaction_${review.id}_${user.id}`;
-      let savedReaction: string | null = null;
-      
-      if (Platform.OS === 'web') {
-        savedReaction = localStorage.getItem(storageKey);
-      } else {
-        savedReaction = await AsyncStorage.getItem(storageKey);
-      }
-      
-      if (savedReaction) {
-        const reactionData = JSON.parse(savedReaction);
-        setReactions(prev => ({
-          ...prev,
-          isLiked: reactionData.isLiked,
-        }));
-      }
-    } catch (error) {
-      console.error('Error loading reactions:', error);
-    }
-  };
-
-  const saveReactions = async (newReactions: PostReaction) => {
-    if (!user) return;
-    
-    try {
-      const storageKey = `post_reaction_${review.id}_${user.id}`;
-      const reactionData = {
-        isLiked: newReactions.isLiked,
-        timestamp: new Date().toISOString(),
-      };
-      
-      if (Platform.OS === 'web') {
-        localStorage.setItem(storageKey, JSON.stringify(reactionData));
-      } else {
-        await AsyncStorage.setItem(storageKey, JSON.stringify(reactionData));
-      }
-    } catch (error) {
-      console.error('Error saving reactions:', error);
-    }
-  };
-
-  const handleLike = () => {
-    if (!user) {
-      Alert.alert('Sign In Required', 'Please sign in to like posts.');
-      return;
-    }
-
-    const newReactions = {
-      ...reactions,
-      isLiked: !reactions.isLiked,
-      likeCount: reactions.isLiked ? reactions.likeCount - 1 : reactions.likeCount + 1,
-    };
-    
-    setReactions(newReactions);
-    saveReactions(newReactions);
-  };
+  const [isLiked, setIsLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(24); // Mock likes count
 
   const getTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
@@ -810,6 +729,18 @@ const ReviewCard = ({ review }: { review: CompanyReview }) => {
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
     return date.toLocaleDateString();
+  };
+
+  const getRatingColor = (rating: number) => {
+    if (rating >= 4.5) return '#27AE60';
+    if (rating >= 4.0) return '#F39C12';
+    if (rating >= 3.0) return '#E67E22';
+    return '#E74C3C';
+  };
+
+  const handleLike = () => {
+    setIsLiked(!isLiked);
+    setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
   };
 
   const userProfile = review.user_profiles;
@@ -839,6 +770,22 @@ const ReviewCard = ({ review }: { review: CompanyReview }) => {
               <Text style={styles.reviewTime}>{getTimeAgo(review.created_at!)}</Text>
             </View>
           </View>
+
+          <View style={styles.reviewRating}>
+            <View style={styles.reviewStars}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Star
+                  key={star}
+                  size={14}
+                  color={star <= review.rating ? getRatingColor(review.rating) : '#2A2A2A'}
+                  fill={star <= review.rating ? getRatingColor(review.rating) : 'transparent'}
+                />
+              ))}
+            </View>
+            <Text style={[styles.reviewRatingText, { color: getRatingColor(review.rating) }]}>
+              {review.rating.toFixed(1)}
+            </Text>
+          </View>
         </View>
 
         <Text style={styles.reviewTitle}>{review.title}</Text>
@@ -852,28 +799,23 @@ const ReviewCard = ({ review }: { review: CompanyReview }) => {
         )}
 
         <View style={styles.postActions}>
-          <TouchableOpacity 
-            style={styles.likeButton}
-            onPress={handleLike}
-          >
+          <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
             <Heart 
               size={20} 
-              color={reactions.isLiked ? '#00D4FF' : '#666666'} 
-              fill={reactions.isLiked ? '#00D4FF' : 'transparent'}
+              color={isLiked ? "#5ce1e6" : "#666666"} 
+              fill={isLiked ? "#5ce1e6" : "transparent"}
             />
-            {reactions.likeCount > 0 && (
-              <Text style={[styles.likeCount, reactions.isLiked && styles.likeCountActive]}>
-                {reactions.likeCount}
-              </Text>
-            )}
+            <Text style={[styles.actionText, isLiked && styles.likedText]}>
+              {likesCount} likes
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={styles.commentButton}
+            style={styles.actionButton}
             onPress={() => setShowComments(true)}
           >
             <MessageCircle size={20} color="#666666" />
-            <Text style={styles.commentCount}>Comment</Text>
+            <Text style={styles.actionText}>3 comments</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -884,86 +826,25 @@ const ReviewCard = ({ review }: { review: CompanyReview }) => {
         postId={review.id}
         postType="review"
         postTitle={review.title}
+        postAuthor={{
+          first_name: userProfile?.first_name || '',
+          last_name: userProfile?.last_name || '',
+          avatar_url: userProfile?.avatar_url || null,
+          verified: userProfile?.verified || false,
+        }}
+        company={{
+          name: company.name,
+          logo_url: company.logo_url,
+        }}
       />
     </>
   );
 };
 
-const ClaimCard = ({ claim }: { claim: CompanyClaim }) => {
-  const { user } = useAuth();
+const ClaimCard = ({ claim, company }: { claim: CompanyClaim; company: FullCompanyProfile }) => {
   const [showComments, setShowComments] = useState(false);
-  const [reactions, setReactions] = useState<PostReaction>({
-    postId: claim.id,
-    postType: 'claim',
-    isLiked: false,
-    likeCount: Math.floor(Math.random() * 30) + 5, // Random initial likes
-  });
-
-  // Load saved reactions from localStorage
-  useEffect(() => {
-    loadReactions();
-  }, [claim.id, user]);
-
-  const loadReactions = async () => {
-    if (!user) return;
-    
-    try {
-      const storageKey = `post_reaction_${claim.id}_${user.id}`;
-      let savedReaction: string | null = null;
-      
-      if (Platform.OS === 'web') {
-        savedReaction = localStorage.getItem(storageKey);
-      } else {
-        savedReaction = await AsyncStorage.getItem(storageKey);
-      }
-      
-      if (savedReaction) {
-        const reactionData = JSON.parse(savedReaction);
-        setReactions(prev => ({
-          ...prev,
-          isLiked: reactionData.isLiked,
-        }));
-      }
-    } catch (error) {
-      console.error('Error loading reactions:', error);
-    }
-  };
-
-  const saveReactions = async (newReactions: PostReaction) => {
-    if (!user) return;
-    
-    try {
-      const storageKey = `post_reaction_${claim.id}_${user.id}`;
-      const reactionData = {
-        isLiked: newReactions.isLiked,
-        timestamp: new Date().toISOString(),
-      };
-      
-      if (Platform.OS === 'web') {
-        localStorage.setItem(storageKey, JSON.stringify(reactionData));
-      } else {
-        await AsyncStorage.setItem(storageKey, JSON.stringify(reactionData));
-      }
-    } catch (error) {
-      console.error('Error saving reactions:', error);
-    }
-  };
-
-  const handleLike = () => {
-    if (!user) {
-      Alert.alert('Sign In Required', 'Please sign in to like posts.');
-      return;
-    }
-
-    const newReactions = {
-      ...reactions,
-      isLiked: !reactions.isLiked,
-      likeCount: reactions.isLiked ? reactions.likeCount - 1 : reactions.likeCount + 1,
-    };
-    
-    setReactions(newReactions);
-    saveReactions(newReactions);
-  };
+  const [isLiked, setIsLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(15); // Mock likes count
 
   const getTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
@@ -986,6 +867,11 @@ const ClaimCard = ({ claim }: { claim: CompanyClaim }) => {
       case 'rejected': return '#E74C3C';
       default: return '#666666';
     }
+  };
+
+  const handleLike = () => {
+    setIsLiked(!isLiked);
+    setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
   };
 
   const userProfile = claim.user_profiles;
@@ -1041,28 +927,23 @@ const ClaimCard = ({ claim }: { claim: CompanyClaim }) => {
         )}
 
         <View style={styles.postActions}>
-          <TouchableOpacity 
-            style={styles.likeButton}
-            onPress={handleLike}
-          >
+          <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
             <Heart 
               size={20} 
-              color={reactions.isLiked ? '#00D4FF' : '#666666'} 
-              fill={reactions.isLiked ? '#00D4FF' : 'transparent'}
+              color={isLiked ? "#5ce1e6" : "#666666"} 
+              fill={isLiked ? "#5ce1e6" : "transparent"}
             />
-            {reactions.likeCount > 0 && (
-              <Text style={[styles.likeCount, reactions.isLiked && styles.likeCountActive]}>
-                {reactions.likeCount}
-              </Text>
-            )}
+            <Text style={[styles.actionText, isLiked && styles.likedText]}>
+              {likesCount} likes
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={styles.commentButton}
+            style={styles.actionButton}
             onPress={() => setShowComments(true)}
           >
             <MessageCircle size={20} color="#666666" />
-            <Text style={styles.commentCount}>Comment</Text>
+            <Text style={styles.actionText}>1 comment</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -1073,6 +954,16 @@ const ClaimCard = ({ claim }: { claim: CompanyClaim }) => {
         postId={claim.id}
         postType="claim"
         postTitle={claim.title}
+        postAuthor={{
+          first_name: userProfile?.first_name || '',
+          last_name: userProfile?.last_name || '',
+          avatar_url: userProfile?.avatar_url || null,
+          verified: userProfile?.verified || false,
+        }}
+        company={{
+          name: company.name,
+          logo_url: company.logo_url,
+        }}
       />
     </>
   );
@@ -1284,7 +1175,7 @@ export default function CompanyDetailScreen() {
             <View>
               {company.reviews && company.reviews.length > 0 ? (
                 company.reviews.map((review) => (
-                  <ReviewCard key={review.id} review={review} />
+                  <ReviewCard key={review.id} review={review} company={company} />
                 ))
               ) : (
                 <View style={styles.emptyState}>
@@ -1302,7 +1193,7 @@ export default function CompanyDetailScreen() {
             <View>
               {company.claims && company.claims.length > 0 ? (
                 company.claims.map((claim) => (
-                  <ClaimCard key={claim.id} claim={claim} />
+                  <ClaimCard key={claim.id} claim={claim} company={company} />
                 ))
               ) : (
                 <View style={styles.emptyState}>
@@ -1657,6 +1548,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666666',
   },
+  reviewRating: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  reviewStars: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  reviewRatingText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
   reviewTitle: {
     fontSize: 18,
     fontWeight: '600',
@@ -1780,6 +1683,25 @@ const styles = StyleSheet.create({
     color: '#CCCCCC',
     lineHeight: 20,
   },
+  postActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 24,
+    paddingTop: 12,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  actionText: {
+    fontSize: 14,
+    color: '#666666',
+    fontWeight: '500',
+  },
+  likedText: {
+    color: '#5ce1e6',
+  },
   emptyState: {
     padding: 40,
     alignItems: 'center',
@@ -1886,235 +1808,220 @@ const styles = StyleSheet.create({
     color: '#CCCCCC',
     lineHeight: 20,
   },
-  // Post Actions (Like & Comment)
-  postActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 24,
-    paddingTop: 12,
-  },
-  likeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  likeCount: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666666',
-  },
-  likeCountActive: {
-    color: '#00D4FF',
-  },
-  commentButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  commentCount: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666666',
-  },
-  // Comments Modal
-  commentsModalContainer: {
-    flex: 1,
-    backgroundColor: '#0A0A0A',
-  },
-  commentsModalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#1A1A1A',
+  // Comments Modal Styles
+  postInfoHeader: {
+    backgroundColor: '#2A2A2A',
+    padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
+    borderBottomColor: '#3A3A3A',
   },
-  commentsModalCloseButton: {
-    padding: 8,
+  postInfoContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
   },
-  commentsModalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+  authorInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  authorAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 8,
+  },
+  authorAvatarPlaceholder: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#3A3A3A',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  authorDetails: {
+    flex: 1,
+  },
+  authorNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  authorName: {
+    fontSize: 14,
+    fontWeight: '600',
     color: '#FFFFFF',
   },
-  commentsModalSubHeader: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    backgroundColor: '#1A1A1A',
-    borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
+  separatorEmoji: {
+    fontSize: 20,
+    marginHorizontal: 12,
   },
-  commentsPostTitle: {
+  companyInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  companyLogo: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 8,
+  },
+  companyLogoPlaceholder: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#3A3A3A',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  companyName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  postTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
-    marginBottom: 4,
+    lineHeight: 22,
   },
-  commentsCount: {
-    fontSize: 14,
-    color: '#666666',
-  },
-  commentsContainer: {
+  commentsList: {
     flex: 1,
-    backgroundColor: '#0A0A0A',
+    padding: 16,
   },
   commentItem: {
+    marginBottom: 20,
+    backgroundColor: '#2A2A2A',
+    borderRadius: 12,
     padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1A1A1A',
-  },
-  replyItem: {
-    marginLeft: 32,
-    paddingLeft: 16,
-    borderLeftWidth: 2,
-    borderLeftColor: '#2A2A2A',
   },
   commentHeader: {
-    marginBottom: 8,
+    marginBottom: 12,
   },
   commentUserInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
   },
   commentAvatar: {
     width: 32,
     height: 32,
     borderRadius: 16,
+    marginRight: 12,
   },
   commentAvatarPlaceholder: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: '#3A3A3A',
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 12,
   },
   commentUserDetails: {
     flex: 1,
+  },
+  commentUserNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 2,
   },
   commentUserName: {
     fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
-    marginBottom: 2,
   },
   commentTime: {
     fontSize: 12,
     color: '#666666',
   },
   commentContent: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#CCCCCC',
-    lineHeight: 20,
-    marginBottom: 8,
+    lineHeight: 22,
+    marginBottom: 12,
   },
   commentActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
   },
   commentLikeButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-  },
-  commentLikeCount: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#666666',
-  },
-  commentLikeCountActive: {
-    color: '#00D4FF',
-  },
-  commentReplyButton: {
     paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 8,
   },
-  commentReplyText: {
-    fontSize: 12,
-    fontWeight: '600',
+  commentLikeText: {
+    fontSize: 13,
     color: '#666666',
+    fontWeight: '500',
   },
-  repliesContainer: {
-    marginTop: 8,
+  commentLikeTextActive: {
+    color: '#5ce1e6',
   },
-  noCommentsContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  emptyComments: {
     alignItems: 'center',
     paddingVertical: 60,
+    gap: 16,
   },
-  noCommentsTitle: {
-    fontSize: 18,
+  emptyCommentsTitle: {
+    fontSize: 20,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginTop: 16,
-    marginBottom: 8,
   },
-  noCommentsText: {
-    fontSize: 14,
+  emptyCommentsText: {
+    fontSize: 16,
     color: '#666666',
     textAlign: 'center',
   },
   commentInputContainer: {
-    backgroundColor: '#1A1A1A',
-    borderTopWidth: 1,
-    borderTopColor: '#2A2A2A',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  replyingToContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     backgroundColor: '#2A2A2A',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  replyingToText: {
-    fontSize: 12,
-    color: '#5ce1e6',
-    fontWeight: '500',
+    borderTopWidth: 1,
+    borderTopColor: '#3A3A3A',
+    padding: 16,
   },
   commentInputRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: 12,
   },
-  commentInputAvatar: {
+  inputUserAvatar: {
     width: 32,
     height: 32,
     borderRadius: 16,
   },
-  commentInputAvatarPlaceholder: {
+  inputUserAvatarPlaceholder: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: '#3A3A3A',
     justifyContent: 'center',
     alignItems: 'center',
   },
   commentInput: {
     flex: 1,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: '#3A3A3A',
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    fontSize: 14,
     color: '#FFFFFF',
+    fontSize: 15,
     maxHeight: 100,
     textAlignVertical: 'top',
   },
-  commentSendButton: {
-    padding: 8,
-    borderRadius: 16,
-    backgroundColor: '#2A2A2A',
+  sendButton: {
+    padding: 12,
+    borderRadius: 20,
+    backgroundColor: '#3A3A3A',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  commentSendButtonDisabled: {
+  sendButtonDisabled: {
     opacity: 0.5,
   },
 });
