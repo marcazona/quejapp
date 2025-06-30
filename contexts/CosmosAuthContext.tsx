@@ -9,6 +9,7 @@ interface AdminProfile {
   role: 'superadmin';
   permissions: string[];
   created_at: string;
+  token_verified: boolean;
 }
 
 interface CosmosAuthContextType {
@@ -16,7 +17,9 @@ interface CosmosAuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  needsToken: boolean;
   signIn: (email: string, password: string) => Promise<void>;
+  verifyToken: (token: string) => Promise<void>;
   signOut: () => Promise<void>;
   clearError: () => void;
 }
@@ -53,12 +56,19 @@ const superAdmin: AdminProfile = {
     'full_access',
   ],
   created_at: new Date().toISOString(),
+  token_verified: false,
+};
+
+// Authentication tokens for different admin levels
+const authTokens = {
+  'admin@marcazona.com': 'CosmosAcess2050!', // Master superadmin token
 };
 
 export const CosmosAuthProvider: React.FC<CosmosAuthProviderProps> = ({ children }) => {
   const [admin, setAdmin] = useState<AdminProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [needsToken, setNeedsToken] = useState(false);
   const mounted = useRef(true);
 
   const clearError = useCallback(() => {
@@ -94,8 +104,16 @@ export const CosmosAuthProvider: React.FC<CosmosAuthProviderProps> = ({ children
           try {
             const adminData = JSON.parse(savedAdmin);
             console.log('CosmosAuthContext: Found saved session for admin:', adminData.name);
-            setAdmin(adminData);
-            setError(null);
+            
+            // Check if token is verified in saved session
+            if (adminData.token_verified) {
+              setAdmin(adminData);
+              setError(null);
+            } else {
+              // Session exists but token not verified, prompt for token
+              setAdmin({ ...adminData, token_verified: false });
+              setNeedsToken(true);
+            }
           } catch (parseError) {
             console.error('CosmosAuthContext: Error parsing saved session:', parseError);
             // Clear invalid session data
@@ -150,20 +168,20 @@ export const CosmosAuthProvider: React.FC<CosmosAuthProviderProps> = ({ children
       }
 
       if (mounted.current) {
-        console.log('CosmosAuthContext: Sign in successful for', superAdmin.name);
-        setAdmin(superAdmin);
+        console.log('CosmosAuthContext: Credentials verified, now requesting token');
         
-        // Save session to storage
-        const sessionData = JSON.stringify(superAdmin);
+        // Set admin but mark as needing token verification
+        const adminWithoutToken = { ...superAdmin, token_verified: false };
+        setAdmin(adminWithoutToken);
+        setNeedsToken(true);
+        
+        // Save partial session (without token verification)
+        const sessionData = JSON.stringify(adminWithoutToken);
         if (Platform.OS === 'web') {
-          console.log('CosmosAuthContext: Saving session to web localStorage');
           localStorage.setItem('cosmos_admin_session', sessionData);
-          console.log('CosmosAuthContext: Saved session to web localStorage successfully');
         } else {
           try {
-            console.log('CosmosAuthContext: Saving session to AsyncStorage');
             await AsyncStorage.setItem('cosmos_admin_session', sessionData);
-            console.log('CosmosAuthContext: Saved session to AsyncStorage successfully');
           } catch (asyncError) {
             console.error('CosmosAuthContext: AsyncStorage save error:', asyncError);
           }
@@ -179,6 +197,61 @@ export const CosmosAuthProvider: React.FC<CosmosAuthProviderProps> = ({ children
     } finally {
       if (mounted.current) {
         console.log('CosmosAuthContext: Sign in process completed');
+        setIsLoading(false);
+      }
+    }
+  };
+
+  const verifyToken = async (token: string) => {
+    if (!mounted.current || !admin) return;
+    
+    console.log('CosmosAuthContext: Verifying authentication token');
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Validate token
+      if (!token.trim()) {
+        throw new Error('Authentication token is required');
+      }
+
+      const expectedToken = authTokens[admin.email as keyof typeof authTokens];
+      
+      if (token.trim() !== expectedToken) {
+        console.log('CosmosAuthContext: Invalid authentication token');
+        throw new Error('Invalid authentication token. Please check your token and try again.');
+      }
+
+      if (mounted.current) {
+        console.log('CosmosAuthContext: Token verified successfully');
+        
+        // Update admin with token verification
+        const verifiedAdmin = { ...admin, token_verified: true };
+        setAdmin(verifiedAdmin);
+        setNeedsToken(false);
+        
+        // Save complete session with token verification
+        const sessionData = JSON.stringify(verifiedAdmin);
+        if (Platform.OS === 'web') {
+          localStorage.setItem('cosmos_admin_session', sessionData);
+        } else {
+          try {
+            await AsyncStorage.setItem('cosmos_admin_session', sessionData);
+          } catch (asyncError) {
+            console.error('CosmosAuthContext: AsyncStorage save error:', asyncError);
+          }
+        }
+      }
+      
+    } catch (error: any) {
+      if (mounted.current) {
+        console.log('CosmosAuthContext: Token verification error:', error.message);
+        setError(error.message || 'Failed to verify token');
+      }
+      throw error;
+    } finally {
+      if (mounted.current) {
+        console.log('CosmosAuthContext: Token verification process completed');
         setIsLoading(false);
       }
     }
@@ -208,6 +281,7 @@ export const CosmosAuthProvider: React.FC<CosmosAuthProviderProps> = ({ children
       if (mounted.current) {
         console.log('CosmosAuthContext: Clearing admin state');
         setAdmin(null);
+        setNeedsToken(false);
         setError(null);
       }
       
@@ -227,10 +301,12 @@ export const CosmosAuthProvider: React.FC<CosmosAuthProviderProps> = ({ children
 
   const value: CosmosAuthContextType = {
     admin,
-    isAuthenticated: !!admin,
+    isAuthenticated: !!admin && admin.token_verified,
     isLoading,
     error,
+    needsToken,
     signIn,
+    verifyToken,
     signOut,
     clearError,
   };

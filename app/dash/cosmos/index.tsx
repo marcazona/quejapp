@@ -12,13 +12,127 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
-import { Eye, EyeOff, Mail, Lock, ArrowRight, Shield, Users, Building2, ChartBar as BarChart3, TriangleAlert as AlertTriangle } from 'lucide-react-native';
+import { Eye, EyeOff, Mail, Lock, ArrowRight, Shield, Users, Building2, ChartBar as BarChart3, TriangleAlert as AlertTriangle, Key } from 'lucide-react-native';
 import { useCosmosAuth, CosmosAuthProvider } from '@/contexts/CosmosAuthContext';
 
+const TokenVerificationForm = () => {
+  const { verifyToken, isLoading, error, clearError, admin } = useCosmosAuth();
+  const [token, setToken] = useState('');
+  const [showToken, setShowToken] = useState(false);
+  const [tokenError, setTokenError] = useState('');
+
+  const handleVerifyToken = async () => {
+    if (!token.trim()) {
+      setTokenError('Authentication token is required');
+      return;
+    }
+
+    try {
+      await verifyToken(token);
+      router.replace('/dash/cosmos/dashboard');
+    } catch (error: any) {
+      // Error is handled by context
+    }
+  };
+
+  const clearTokenError = () => {
+    if (tokenError) {
+      setTokenError('');
+    }
+    if (error) {
+      clearError();
+    }
+  };
+
+  return (
+    <View style={styles.tokenContainer}>
+      <View style={styles.tokenHeader}>
+        <View style={styles.tokenIconContainer}>
+          <Key size={32} color="#FF6B6B" />
+        </View>
+        <Text style={styles.tokenTitle}>Authentication Required</Text>
+        <Text style={styles.tokenSubtitle}>
+          Welcome, {admin?.name}. Please enter your authentication token to access the Cosmos dashboard.
+        </Text>
+      </View>
+
+      {/* Error Display */}
+      {(error || tokenError) && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error || tokenError}</Text>
+        </View>
+      )}
+
+      {/* Token Input */}
+      <View style={styles.tokenInputGroup}>
+        <Text style={styles.label}>Authentication Token</Text>
+        <View style={[
+          styles.inputContainer,
+          (error || tokenError) && styles.inputError
+        ]}>
+          <Key size={20} color="#666666" />
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your authentication token"
+            placeholderTextColor="#666666"
+            value={token}
+            onChangeText={(text) => {
+              setToken(text);
+              clearTokenError();
+            }}
+            secureTextEntry={!showToken}
+            autoCapitalize="none"
+            autoCorrect={false}
+            editable={!isLoading}
+            returnKeyType="done"
+            onSubmitEditing={handleVerifyToken}
+          />
+          <TouchableOpacity 
+            onPress={() => setShowToken(!showToken)}
+            style={styles.eyeButton}
+            disabled={isLoading}
+          >
+            {showToken ? (
+              <EyeOff size={20} color="#666666" />
+            ) : (
+              <Eye size={20} color="#666666" />
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Verify Button */}
+      <TouchableOpacity 
+        style={[styles.verifyButton, isLoading && styles.verifyButtonDisabled]}
+        onPress={handleVerifyToken}
+        disabled={isLoading}
+      >
+        {isLoading ? (
+          <ActivityIndicator size="small" color="#FFFFFF" />
+        ) : (
+          <>
+            <Text style={styles.verifyButtonText}>Verify & Access</Text>
+            <ArrowRight size={20} color="#FFFFFF" />
+          </>
+        )}
+      </TouchableOpacity>
+
+      {/* Security Notice */}
+      <View style={styles.tokenSecurityNotice}>
+        <Shield size={14} color="#FF6B6B" />
+        <Text style={styles.tokenSecurityText}>
+          Your authentication token provides full superadmin access to the platform
+        </Text>
+      </View>
+    </View>
+  );
+};
+
 const LoginForm = () => {
-  const { signIn, isLoading, error, clearError, isAuthenticated } = useCosmosAuth();
+  const { signIn, isLoading, error, clearError, isAuthenticated, needsToken } = useCosmosAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -30,6 +144,11 @@ const LoginForm = () => {
       router.replace('/dash/cosmos/dashboard');
     }
   }, [isAuthenticated]);
+
+  // Show token verification form if needed
+  if (needsToken) {
+    return <TokenVerificationForm />;
+  }
 
   const validateForm = () => {
     const newErrors: { email?: string; password?: string } = {};
@@ -53,7 +172,7 @@ const LoginForm = () => {
 
     try {
       await signIn(email, password);
-      router.replace('/dash/cosmos/dashboard');
+      // After successful sign in, the component will re-render and show token form
     } catch (error: any) {
       // Error is handled by context
     }
@@ -69,157 +188,145 @@ const LoginForm = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#0A0A0A" />
-      <SafeAreaView style={styles.safeArea}>
-        <KeyboardAvoidingView 
-          style={styles.keyboardAvoid}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-          <ScrollView 
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            <View style={styles.content}>
-              {/* Header */}
-              <View style={styles.header}>
-                <View style={styles.logoContainer}>
-                  <View style={styles.logoIcon}>
-                    <Shield size={48} color="#FF6B6B" />
-                  </View>
-                  <Text style={styles.logoText}>Cosmos</Text>
-                  <Text style={styles.logoSubtext}>SuperAdmin Dashboard</Text>
-                </View>
-                <Text style={styles.subtitle}>
-                  Comprehensive platform management and analytics
-                </Text>
-              </View>
+    <View style={styles.content}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.logoContainer}>
+          <View style={styles.logoIcon}>
+            <Shield size={48} color="#FF6B6B" />
+          </View>
+          <Text style={styles.logoText}>Cosmos</Text>
+          <Text style={styles.logoSubtext}>SuperAdmin Dashboard</Text>
+        </View>
+        <Text style={styles.subtitle}>
+          Comprehensive platform management and analytics
+        </Text>
+      </View>
 
-              {/* Error Display */}
-              {error && (
-                <View style={styles.errorContainer}>
-                  <Text style={styles.errorText}>{error}</Text>
-                </View>
+      {/* Error Display */}
+      {error && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
+
+      {/* Form */}
+      <View style={styles.form}>
+        {/* Email Input */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Admin Email</Text>
+          <View style={[
+            styles.inputContainer,
+            errors.email && styles.inputError
+          ]}>
+            <Mail size={20} color="#666666" />
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your admin email"
+              placeholderTextColor="#666666"
+              value={email}
+              onChangeText={(text) => {
+                setEmail(text);
+                clearFormError('email');
+              }}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="email"
+              editable={!isLoading}
+            />
+          </View>
+          {errors.email && (
+            <Text style={styles.errorText}>{errors.email}</Text>
+          )}
+        </View>
+
+        {/* Password Input */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Password</Text>
+          <View style={[
+            styles.inputContainer,
+            errors.password && styles.inputError
+          ]}>
+            <Lock size={20} color="#666666" />
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your password"
+              placeholderTextColor="#666666"
+              value={password}
+              onChangeText={(text) => {
+                setPassword(text);
+                clearFormError('password');
+              }}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              autoComplete="password"
+              editable={!isLoading}
+            />
+            <TouchableOpacity 
+              onPress={() => setShowPassword(!showPassword)}
+              style={styles.eyeButton}
+              disabled={isLoading}
+            >
+              {showPassword ? (
+                <EyeOff size={20} color="#666666" />
+              ) : (
+                <Eye size={20} color="#666666" />
               )}
+            </TouchableOpacity>
+          </View>
+          {errors.password && (
+            <Text style={styles.errorText}>{errors.password}</Text>
+          )}
+        </View>
 
-              {/* Form */}
-              <View style={styles.form}>
-                {/* Email Input */}
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Admin Email</Text>
-                  <View style={[
-                    styles.inputContainer,
-                    errors.email && styles.inputError
-                  ]}>
-                    <Mail size={20} color="#666666" />
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Enter your admin email"
-                      placeholderTextColor="#666666"
-                      value={email}
-                      onChangeText={(text) => {
-                        setEmail(text);
-                        clearFormError('email');
-                      }}
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      autoComplete="email"
-                      editable={!isLoading}
-                    />
-                  </View>
-                  {errors.email && (
-                    <Text style={styles.errorText}>{errors.email}</Text>
-                  )}
-                </View>
+        {/* Sign In Button */}
+        <TouchableOpacity 
+          style={[styles.signInButton, isLoading && styles.signInButtonDisabled]}
+          onPress={handleSignIn}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <>
+              <Text style={styles.signInButtonText}>Continue to Authentication</Text>
+              <ArrowRight size={20} color="#FFFFFF" />
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
 
-                {/* Password Input */}
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Password</Text>
-                  <View style={[
-                    styles.inputContainer,
-                    errors.password && styles.inputError
-                  ]}>
-                    <Lock size={20} color="#666666" />
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Enter your password"
-                      placeholderTextColor="#666666"
-                      value={password}
-                      onChangeText={(text) => {
-                        setPassword(text);
-                        clearFormError('password');
-                      }}
-                      secureTextEntry={!showPassword}
-                      autoCapitalize="none"
-                      autoComplete="password"
-                      editable={!isLoading}
-                    />
-                    <TouchableOpacity 
-                      onPress={() => setShowPassword(!showPassword)}
-                      style={styles.eyeButton}
-                      disabled={isLoading}
-                    >
-                      {showPassword ? (
-                        <EyeOff size={20} color="#666666" />
-                      ) : (
-                        <Eye size={20} color="#666666" />
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                  {errors.password && (
-                    <Text style={styles.errorText}>{errors.password}</Text>
-                  )}
-                </View>
+      {/* Features */}
+      <View style={styles.features}>
+        <Text style={styles.featuresTitle}>Platform Management</Text>
+        <View style={styles.featuresList}>
+          <View style={styles.featureItem}>
+            <Building2 size={20} color="#4ECDC4" />
+            <Text style={styles.featureText}>Company Management</Text>
+          </View>
+          <View style={styles.featureItem}>
+            <Users size={20} color="#45B7D1" />
+            <Text style={styles.featureText}>User Administration</Text>
+          </View>
+          <View style={styles.featureItem}>
+            <BarChart3 size={20} color="#96CEB4" />
+            <Text style={styles.featureText}>Analytics & Reports</Text>
+          </View>
+          <View style={styles.featureItem}>
+            <AlertTriangle size={20} color="#FFEAA7" />
+            <Text style={styles.featureText}>System Monitoring</Text>
+          </View>
+        </View>
+      </View>
 
-                {/* Sign In Button */}
-                <TouchableOpacity 
-                  style={[styles.signInButton, isLoading && styles.signInButtonDisabled]}
-                  onPress={handleSignIn}
-                  disabled={isLoading}
-                >
-                  <Text style={styles.signInButtonText}>
-                    {isLoading ? 'Signing in...' : 'Access Cosmos'}
-                  </Text>
-                  {!isLoading && <ArrowRight size={20} color="#FFFFFF" />}
-                </TouchableOpacity>
-              </View>
-
-              {/* Features */}
-              <View style={styles.features}>
-                <Text style={styles.featuresTitle}>Platform Management</Text>
-                <View style={styles.featuresList}>
-                  <View style={styles.featureItem}>
-                    <Building2 size={20} color="#4ECDC4" />
-                    <Text style={styles.featureText}>Company Management</Text>
-                  </View>
-                  <View style={styles.featureItem}>
-                    <Users size={20} color="#45B7D1" />
-                    <Text style={styles.featureText}>User Administration</Text>
-                  </View>
-                  <View style={styles.featureItem}>
-                    <BarChart3 size={20} color="#96CEB4" />
-                    <Text style={styles.featureText}>Analytics & Reports</Text>
-                  </View>
-                  <View style={styles.featureItem}>
-                    <AlertTriangle size={20} color="#FFEAA7" />
-                    <Text style={styles.featureText}>System Monitoring</Text>
-                  </View>
-                </View>
-              </View>
-
-              {/* Security Notice */}
-              <View style={styles.securityNotice}>
-                <Shield size={16} color="#FF6B6B" />
-                <Text style={styles.securityText}>
-                  Secure superadmin access with full platform permissions
-                </Text>
-              </View>
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
+      {/* Security Notice */}
+      <View style={styles.securityNotice}>
+        <Shield size={16} color="#FF6B6B" />
+        <Text style={styles.securityText}>
+          Two-factor authentication with secure token verification
+        </Text>
+      </View>
     </View>
   );
 };
@@ -227,7 +334,23 @@ const LoginForm = () => {
 export default function CosmosLoginScreen() {
   return (
     <CosmosAuthProvider>
-      <LoginForm />
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#0A0A0A" />
+        <SafeAreaView style={styles.safeArea}>
+          <KeyboardAvoidingView 
+            style={styles.keyboardAvoid}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
+            <ScrollView 
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              <LoginForm />
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </View>
     </CosmosAuthProvider>
   );
 }
@@ -419,5 +542,91 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#FF6B6B',
     fontWeight: '500',
+  },
+  // Token verification styles
+  tokenContainer: {
+    width: '100%',
+    maxWidth: 400,
+    alignSelf: 'center',
+  },
+  tokenHeader: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  tokenIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    backgroundColor: '#1A1A1A',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: '#FF6B6B',
+    shadowColor: '#FF6B6B',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  tokenTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  tokenSubtitle: {
+    fontSize: 16,
+    color: '#888888',
+    textAlign: 'center',
+    lineHeight: 24,
+    paddingHorizontal: 20,
+  },
+  tokenInputGroup: {
+    marginBottom: 32,
+  },
+  verifyButton: {
+    backgroundColor: '#FF6B6B',
+    borderRadius: 16,
+    paddingVertical: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    shadowColor: '#FF6B6B',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+    minHeight: 56,
+    marginBottom: 24,
+  },
+  verifyButtonDisabled: {
+    opacity: 0.7,
+    shadowOpacity: 0.1,
+  },
+  verifyButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  tokenSecurityNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#1A1A1A',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FF6B6B',
+  },
+  tokenSecurityText: {
+    fontSize: 12,
+    color: '#FF6B6B',
+    fontWeight: '500',
+    textAlign: 'center',
+    flex: 1,
   },
 });
