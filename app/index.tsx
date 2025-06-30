@@ -6,6 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function IndexScreen() {
   const { isAuthenticated, isLoading, error } = useAuth();
 
+  console.log('IndexScreen: Rendering - isAuthenticated:', isAuthenticated, 'isLoading:', isLoading, 'error:', error);
+
   useEffect(() => {
     console.log('IndexScreen: Component mounted');
     console.log('IndexScreen: isAuthenticated =', isAuthenticated);

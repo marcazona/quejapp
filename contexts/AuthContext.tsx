@@ -50,6 +50,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const mounted = useRef(true);
   const initialized = useRef(false);
 
+  console.log('AuthProvider: Rendering - isLoading:', isLoading, 'error:', error, 'user:', !!user);
+
   const clearError = useCallback(() => {
     console.log('AuthProvider: Clearing error');
     setError(null);
