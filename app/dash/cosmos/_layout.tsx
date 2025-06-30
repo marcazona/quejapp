@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, Platform, Image } from 'react-native';
 import { Stack, useRouter, usePathname } from 'expo-router';
-import { BarChart3, Building2, Users, AlertTriangle, DollarSign, Settings, LogOut, Shield, TrendingUp, MessageCircle, Megaphone } from 'lucide-react-native';
+import { ChartBar as BarChart3, Building2, Users, TriangleAlert as AlertTriangle, DollarSign, Settings, LogOut, Shield, TrendingUp, MessageCircle, Megaphone } from 'lucide-react-native';
 import { useCosmosAuth, CosmosAuthProvider } from '@/contexts/CosmosAuthContext';
 
 function CosmosTabBar() {
