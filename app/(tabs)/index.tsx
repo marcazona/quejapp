@@ -12,11 +12,12 @@ import {
   Platform,
   Dimensions,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
-import { MapPin, Star, Shield, MessageCircle, User, Building2, Phone, Mail, Globe } from 'lucide-react-native';
+import { MapPin, Star, Shield, MessageCircle, User, Building2, Phone, Mail, Globe, Plus } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import { getDiscoveryCompanies, type Company } from '@/lib/database';
+import { getDiscoveryCompanies, createSampleCompanies, type Company } from '@/lib/database';
 
 const { width } = Dimensions.get('window');
 const GRID_SPACING = 12;
@@ -121,6 +122,18 @@ export default function DiscoverScreen() {
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  const handleCreateSampleData = async () => {
+    try {
+      setLoading(true);
+      await createSampleCompanies();
+      await loadCompanies();
+      Alert.alert('Success', 'Sample companies created successfully!');
+    } catch (error: any) {
+      console.error('Error creating sample companies:', error);
+      Alert.alert('Error', 'Failed to create sample companies');
     }
   };
 
@@ -266,6 +279,12 @@ export default function DiscoverScreen() {
           <TouchableOpacity style={styles.refreshButton} onPress={() => loadCompanies()}>
             <Text style={styles.refreshButtonText}>Refresh</Text>
           </TouchableOpacity>
+          
+          {/* Add sample data button for testing */}
+          <TouchableOpacity style={styles.sampleButton} onPress={handleCreateSampleData}>
+            <Plus size={16} color="#FFFFFF" />
+            <Text style={styles.sampleButtonText}>Add Sample Companies</Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>
@@ -401,11 +420,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 16,
     borderRadius: 16,
+    marginBottom: 16,
   },
   refreshButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+  sampleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#2A2A2A',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#5ce1e6',
+  },
+  sampleButtonText: {
+    color: '#5ce1e6',
+    fontSize: 14,
+    fontWeight: '600',
   },
   gridContainer: {
     flex: 1,

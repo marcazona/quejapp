@@ -159,11 +159,12 @@ export const getDiscoveryCompanies = async (userLocation?: { latitude: number; l
 
     if (error) {
       console.error('Database: Error fetching companies:', error);
-      throw error;
+      // Return empty array instead of throwing to prevent app crashes
+      return [];
     }
 
     // Add distance calculation if user location is provided
-    const companiesWithDistance = companies.map(company => ({
+    const companiesWithDistance = (companies || []).map(company => ({
       ...company,
       distance: userLocation ? Math.random() * 10 : undefined, // TODO: Calculate real distance
     }));
@@ -172,7 +173,8 @@ export const getDiscoveryCompanies = async (userLocation?: { latitude: number; l
     return companiesWithDistance;
   } catch (error) {
     console.error('Database: Error in getDiscoveryCompanies:', error);
-    throw error;
+    // Return empty array instead of throwing to prevent app crashes
+    return [];
   }
 };
 
@@ -189,7 +191,7 @@ export const getCompanyById = async (companyId: string): Promise<FullCompanyProf
 
     if (companyError) {
       console.error('Database: Error fetching company:', companyError);
-      throw companyError;
+      return null;
     }
 
     if (!company) {
@@ -243,7 +245,7 @@ export const getCompanyById = async (companyId: string): Promise<FullCompanyProf
     };
   } catch (error) {
     console.error('Database: Error in getCompanyById:', error);
-    throw error;
+    return null;
   }
 };
 
@@ -287,11 +289,11 @@ export const searchCompanies = async (
 
     if (error) {
       console.error('Database: Error searching companies:', error);
-      throw error;
+      return [];
     }
 
     // Add distance if location provided
-    const companiesWithDistance = companies.map(company => ({
+    const companiesWithDistance = (companies || []).map(company => ({
       ...company,
       distance: userLocation ? Math.random() * 10 : undefined, // TODO: Calculate real distance
     }));
@@ -300,7 +302,7 @@ export const searchCompanies = async (
     return companiesWithDistance;
   } catch (error) {
     console.error('Database: Error in searchCompanies:', error);
-    throw error;
+    return [];
   }
 };
 
@@ -325,12 +327,12 @@ export const getUserChatConversations = async (userId: string): Promise<ChatConv
 
     if (error) {
       console.error('Database: Error fetching conversations:', error);
-      throw error;
+      return [];
     }
 
     // Get last message for each conversation
     const conversationsWithMessages = await Promise.all(
-      conversations.map(async (conv) => {
+      (conversations || []).map(async (conv) => {
         const { data: lastMessage } = await supabase
           .from('chat_messages')
           .select('content, created_at, sender_type, read_at')
@@ -350,7 +352,7 @@ export const getUserChatConversations = async (userId: string): Promise<ChatConv
     return conversationsWithMessages;
   } catch (error) {
     console.error('Database: Error in getUserChatConversations:', error);
-    throw error;
+    return [];
   }
 };
 
@@ -450,13 +452,13 @@ export const getUserPosts = async (currentUserId?: string): Promise<Post[]> => {
 
     if (error) {
       console.error('Database: Error fetching posts:', error);
-      throw error;
+      return [];
     }
 
     return posts || [];
   } catch (error) {
     console.error('Database: Error in getUserPosts:', error);
-    throw error;
+    return [];
   }
 };
 
@@ -501,15 +503,57 @@ export const likePost = async (postId: string, userId: string): Promise<void> =>
   try {
     console.log('Database: Liking post:', postId, 'by user:', userId);
     
-    // TODO: Implement likes table and logic
-    // For now, just increment the likes count
-    const { error } = await supabase.rpc('increment_post_likes', {
-      post_id: postId
-    });
+    // Check if user already liked this post
+    const { data: existingLike } = await supabase
+      .from('post_likes')
+      .select('id')
+      .eq('post_id', postId)
+      .eq('user_id', userId)
+      .single();
 
-    if (error) {
-      console.error('Database: Error liking post:', error);
-      throw error;
+    if (existingLike) {
+      // Unlike the post
+      const { error: deleteError } = await supabase
+        .from('post_likes')
+        .delete()
+        .eq('post_id', postId)
+        .eq('user_id', userId);
+
+      if (deleteError) {
+        console.error('Database: Error unliking post:', deleteError);
+        throw deleteError;
+      }
+
+      // Decrement likes count
+      const { error: decrementError } = await supabase.rpc('decrement_post_likes', {
+        post_id: postId
+      });
+
+      if (decrementError) {
+        console.error('Database: Error decrementing likes:', decrementError);
+      }
+    } else {
+      // Like the post
+      const { error: insertError } = await supabase
+        .from('post_likes')
+        .insert({
+          post_id: postId,
+          user_id: userId,
+        });
+
+      if (insertError) {
+        console.error('Database: Error liking post:', insertError);
+        throw insertError;
+      }
+
+      // Increment likes count
+      const { error: incrementError } = await supabase.rpc('increment_post_likes', {
+        post_id: postId
+      });
+
+      if (incrementError) {
+        console.error('Database: Error incrementing likes:', incrementError);
+      }
     }
   } catch (error) {
     console.error('Database: Error in likePost:', error);
@@ -521,12 +565,30 @@ export const getPostComments = async (postId: string): Promise<PostComment[]> =>
   try {
     console.log('Database: Fetching comments for post:', postId);
     
-    // TODO: Implement comments table
-    // For now, return empty array
-    return [];
+    const { data: comments, error } = await supabase
+      .from('post_comments')
+      .select(`
+        *,
+        user_profiles (
+          id,
+          first_name,
+          last_name,
+          avatar_url,
+          verified
+        )
+      `)
+      .eq('post_id', postId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('Database: Error fetching comments:', error);
+      return [];
+    }
+
+    return comments || [];
   } catch (error) {
     console.error('Database: Error in getPostComments:', error);
-    throw error;
+    return [];
   }
 };
 
@@ -534,8 +596,31 @@ export const addComment = async (postId: string, userId: string, content: string
   try {
     console.log('Database: Adding comment to post:', postId, 'by user:', userId);
     
-    // TODO: Implement comments table and logic
-    throw new Error('Comments feature not yet implemented');
+    const { data: comment, error } = await supabase
+      .from('post_comments')
+      .insert({
+        post_id: postId,
+        user_id: userId,
+        content,
+      })
+      .select(`
+        *,
+        user_profiles (
+          id,
+          first_name,
+          last_name,
+          avatar_url,
+          verified
+        )
+      `)
+      .single();
+
+    if (error) {
+      console.error('Database: Error adding comment:', error);
+      throw error;
+    }
+
+    return comment;
   } catch (error) {
     console.error('Database: Error in addComment:', error);
     throw error;
@@ -555,13 +640,13 @@ export const getUserPhotos = async (userId: string) => {
 
     if (error) {
       console.error('Database: Error fetching user photos:', error);
-      throw error;
+      return [];
     }
 
     return photos || [];
   } catch (error) {
     console.error('Database: Error in getUserPhotos:', error);
-    throw error;
+    return [];
   }
 };
 
@@ -688,6 +773,138 @@ export const createCompanyClaim = async (
     return claim;
   } catch (error) {
     console.error('Database: Error in createCompanyClaim:', error);
+    throw error;
+  }
+};
+
+// Create sample companies for testing
+export const createSampleCompanies = async (): Promise<void> => {
+  try {
+    console.log('Database: Creating sample companies...');
+    
+    const sampleCompanies = [
+      {
+        name: 'TechCorp Solutions',
+        description: 'Leading technology solutions provider specializing in cloud computing and digital transformation.',
+        logo_url: 'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=200&h=200',
+        cover_image_url: 'https://images.pexels.com/photos/3184292/pexels-photo-3184292.jpeg?auto=compress&cs=tinysrgb&w=400&h=300',
+        industry: 'Technology',
+        website: 'https://techcorp.com',
+        phone: '+1-555-0123',
+        email: 'contact@techcorp.com',
+        address: '123 Tech Street',
+        city: 'San Francisco',
+        country: 'USA',
+        rating: 4.2,
+        total_reviews: 156,
+        total_claims: 23,
+        verified: true,
+        is_active: true,
+      },
+      {
+        name: 'GreenEarth Foods',
+        description: 'Organic and sustainable food products for a healthier planet and lifestyle.',
+        logo_url: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=200&h=200',
+        cover_image_url: 'https://images.pexels.com/photos/1640774/pexels-photo-1640774.jpeg?auto=compress&cs=tinysrgb&w=400&h=300',
+        industry: 'Food & Beverage',
+        website: 'https://greenearthfoods.com',
+        phone: '+1-555-0456',
+        email: 'hello@greenearthfoods.com',
+        address: '456 Green Avenue',
+        city: 'Portland',
+        country: 'USA',
+        rating: 4.7,
+        total_reviews: 89,
+        total_claims: 12,
+        verified: true,
+        is_active: true,
+      },
+      {
+        name: 'Urban Fashion Co.',
+        description: 'Trendy and affordable fashion for the modern urban lifestyle.',
+        logo_url: 'https://images.pexels.com/photos/1040945/pexels-photo-1040945.jpeg?auto=compress&cs=tinysrgb&w=200&h=200',
+        cover_image_url: 'https://images.pexels.com/photos/1040946/pexels-photo-1040946.jpeg?auto=compress&cs=tinysrgb&w=400&h=300',
+        industry: 'Fashion & Retail',
+        website: 'https://urbanfashion.com',
+        phone: '+1-555-0789',
+        email: 'style@urbanfashion.com',
+        address: '789 Fashion Boulevard',
+        city: 'New York',
+        country: 'USA',
+        rating: 3.9,
+        total_reviews: 234,
+        total_claims: 45,
+        verified: false,
+        is_active: true,
+      },
+      {
+        name: 'HealthFirst Clinic',
+        description: 'Comprehensive healthcare services with a focus on preventive medicine.',
+        logo_url: 'https://images.pexels.com/photos/263402/pexels-photo-263402.jpeg?auto=compress&cs=tinysrgb&w=200&h=200',
+        cover_image_url: 'https://images.pexels.com/photos/263401/pexels-photo-263401.jpeg?auto=compress&cs=tinysrgb&w=400&h=300',
+        industry: 'Healthcare',
+        website: 'https://healthfirst.com',
+        phone: '+1-555-0321',
+        email: 'care@healthfirst.com',
+        address: '321 Health Plaza',
+        city: 'Chicago',
+        country: 'USA',
+        rating: 4.5,
+        total_reviews: 67,
+        total_claims: 8,
+        verified: true,
+        is_active: true,
+      },
+      {
+        name: 'EcoClean Services',
+        description: 'Environmentally friendly cleaning services for homes and businesses.',
+        logo_url: 'https://images.pexels.com/photos/4239091/pexels-photo-4239091.jpeg?auto=compress&cs=tinysrgb&w=200&h=200',
+        cover_image_url: 'https://images.pexels.com/photos/4239092/pexels-photo-4239092.jpeg?auto=compress&cs=tinysrgb&w=400&h=300',
+        industry: 'Services',
+        website: 'https://ecoclean.com',
+        phone: '+1-555-0654',
+        email: 'info@ecoclean.com',
+        address: '654 Clean Street',
+        city: 'Seattle',
+        country: 'USA',
+        rating: 4.3,
+        total_reviews: 123,
+        total_claims: 19,
+        verified: true,
+        is_active: true,
+      },
+      {
+        name: 'AutoFix Garage',
+        description: 'Professional automotive repair and maintenance services you can trust.',
+        logo_url: 'https://images.pexels.com/photos/3806288/pexels-photo-3806288.jpeg?auto=compress&cs=tinysrgb&w=200&h=200',
+        cover_image_url: 'https://images.pexels.com/photos/3806289/pexels-photo-3806289.jpeg?auto=compress&cs=tinysrgb&w=400&h=300',
+        industry: 'Automotive',
+        website: 'https://autofix.com',
+        phone: '+1-555-0987',
+        email: 'service@autofix.com',
+        address: '987 Motor Way',
+        city: 'Detroit',
+        country: 'USA',
+        rating: 4.1,
+        total_reviews: 178,
+        total_claims: 34,
+        verified: false,
+        is_active: true,
+      },
+    ];
+
+    const { error } = await supabase
+      .from('companies')
+      .insert(sampleCompanies);
+
+    if (error) {
+      console.error('Database: Error creating sample companies:', error);
+      throw error;
+    }
+
+    console.log('Database: Sample companies created successfully');
+  } catch (error) {
+    console.error('Database: Error in createSampleCompanies:', error);
     throw error;
   }
 };
