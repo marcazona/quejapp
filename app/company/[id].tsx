@@ -420,13 +420,6 @@ const ReviewCard = ({ review }: { review: CompanyReview }) => {
     return date.toLocaleDateString();
   };
 
-  const getRatingColor = (rating: number) => {
-    if (rating >= 4.5) return '#27AE60';
-    if (rating >= 4.0) return '#F39C12';
-    if (rating >= 3.0) return '#E67E22';
-    return '#E74C3C';
-  };
-
   const userProfile = review.user_profiles;
 
   return (
@@ -452,22 +445,6 @@ const ReviewCard = ({ review }: { review: CompanyReview }) => {
             </View>
             <Text style={styles.reviewTime}>{getTimeAgo(review.created_at!)}</Text>
           </View>
-        </View>
-
-        <View style={styles.reviewRating}>
-          <View style={styles.reviewStars}>
-            {[1, 2, 3, 4, 5].map((star) => (
-              <Star
-                key={star}
-                size={14}
-                color={star <= review.rating ? getRatingColor(review.rating) : '#2A2A2A'}
-                fill={star <= review.rating ? getRatingColor(review.rating) : 'transparent'}
-              />
-            ))}
-          </View>
-          <Text style={[styles.reviewRatingText, { color: getRatingColor(review.rating) }]}>
-            {review.rating.toFixed(1)}
-          </Text>
         </View>
       </View>
 
@@ -692,14 +669,6 @@ export default function CompanyDetailScreen() {
       </View>
     );
   }
-
-  const getRatingColor = (rating: number | null) => {
-    if (!rating) return '#666666';
-    if (rating >= 4.5) return '#27AE60';
-    if (rating >= 4.0) return '#F39C12';
-    if (rating >= 3.0) return '#E67E22';
-    return '#E74C3C';
-  };
 
   return (
     <View style={styles.container}>
@@ -1146,18 +1115,6 @@ const styles = StyleSheet.create({
   reviewTime: {
     fontSize: 14,
     color: '#666666',
-  },
-  reviewRating: {
-    alignItems: 'flex-end',
-    gap: 4,
-  },
-  reviewStars: {
-    flexDirection: 'row',
-    gap: 2,
-  },
-  reviewRatingText: {
-    fontSize: 14,
-    fontWeight: '600',
   },
   reviewTitle: {
     fontSize: 18,
