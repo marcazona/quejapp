@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -1548,9 +1548,6 @@ const styles = StyleSheet.create({
   // Instagram-style Toxic Blue Heart Reaction Styles
   postReactions: {
     marginTop: 16,
-    paddingTop: 12,
-    borderTopWidth: 0.5,
-    borderTopColor: '#333333',
   },
   instagramReactionContainer: {
     flexDirection: 'row',
