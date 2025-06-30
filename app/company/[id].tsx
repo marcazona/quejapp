@@ -473,13 +473,6 @@ const ReviewCard = ({ review }: { review: CompanyReview }) => {
 
       <Text style={styles.reviewTitle}>{review.title}</Text>
       <Text style={styles.reviewContent}>{review.content}</Text>
-
-      {review.is_verified_purchase && (
-        <View style={styles.verifiedPurchase}>
-          <Shield size={12} color="#27AE60" />
-          <Text style={styles.verifiedPurchaseText}>Verified Purchase</Text>
-        </View>
-      )}
     </View>
   );
 };
@@ -1175,16 +1168,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#CCCCCC',
     lineHeight: 24,
-  },
-  verifiedPurchase: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  verifiedPurchaseText: {
-    fontSize: 14,
-    color: '#27AE60',
-    fontWeight: '500',
   },
   claimCard: {
     padding: 20,
