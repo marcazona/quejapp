@@ -19,7 +19,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, router } from 'expo-router';
-import { ArrowLeft, Star, Shield, MessageCircle, Phone, Mail, Globe, MapPin, Building2, User, Plus, X, TriangleAlert as AlertTriangle, ThumbsUp, ThumbsDown, TrendingUp, TrendingDown, Heart, Send, MoreHorizontal } from 'lucide-react-native';
+import { ArrowLeft, Star, Shield, MessageCircle, Phone, Mail, Globe, MapPin, Building2, User, Plus, X, TriangleAlert as AlertTriangle, ThumbsUp, ThumbsDown, TrendingUp, TrendingDown, Heart, Send, MoveHorizontal as MoreHorizontal } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { getCompanyById, startLiveChatWithCompany, type FullCompanyProfile, type CompanyReview, type CompanyClaim } from '@/lib/database';
 
