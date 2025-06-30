@@ -15,7 +15,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
-import { Eye, EyeOff, Mail, Lock, ArrowRight, Shield, Users, Building2, ChartBar as BarChart3, TriangleAlert as AlertTriangle, Key } from 'lucide-react-native';
+import { Eye, EyeOff, Mail, Lock, ArrowRight, Shield, Users, Building2, ChartBar as BarChart3, TriangleAlert as AlertTriangle, Key, MessageCircle, DollarSign } from 'lucide-react-native';
 import { useCosmosAuth, CosmosAuthProvider } from '@/contexts/CosmosAuthContext';
 
 const TokenVerificationForm = () => {
@@ -199,7 +199,7 @@ const LoginForm = () => {
           <Text style={styles.logoSubtext}>SuperAdmin Dashboard</Text>
         </View>
         <Text style={styles.subtitle}>
-          Comprehensive platform management and analytics
+          Comprehensive system administration and analytics
         </Text>
       </View>
 
@@ -299,7 +299,7 @@ const LoginForm = () => {
 
       {/* Features */}
       <View style={styles.features}>
-        <Text style={styles.featuresTitle}>Platform Management</Text>
+        <Text style={styles.featuresTitle}>Dashboard Features</Text>
         <View style={styles.featuresList}>
           <View style={styles.featureItem}>
             <Building2 size={20} color="#4ECDC4" />
@@ -312,6 +312,14 @@ const LoginForm = () => {
           <View style={styles.featureItem}>
             <BarChart3 size={20} color="#96CEB4" />
             <Text style={styles.featureText}>Analytics & Reports</Text>
+          </View>
+          <View style={styles.featureItem}>
+            <MessageCircle size={20} color="#A8E6CF" />
+            <Text style={styles.featureText}>Content Moderation</Text>
+          </View>
+          <View style={styles.featureItem}>
+            <DollarSign size={20} color="#FFD93D" />
+            <Text style={styles.featureText}>Billing Management</Text>
           </View>
           <View style={styles.featureItem}>
             <AlertTriangle size={20} color="#FFEAA7" />
