@@ -12,7 +12,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { router } from 'expo-router';
-import { TrendingUp, TrendingDown, Users, Building2, MessageCircle, DollarSign, TriangleAlert as AlertTriangle, Eye, RefreshCw, Calendar, ChartBar as BarChart3, ChartPie as PieChart, Activity } from 'lucide-react-native';
+import { TrendingUp, TrendingDown, Users, Building2, MessageCircle, DollarSign, TriangleAlert as AlertTriangle, Eye, RefreshCw, Calendar, ChartBar as BarChart3, ChartPie as PieChart, Activity, Shield, Zap, Crown } from 'lucide-react-native';
 import { useCosmosAuth } from '@/contexts/CosmosAuthContext';
 
 const { width } = Dimensions.get('window');
@@ -44,9 +44,9 @@ const MetricCard = ({ metric }: { metric: DashboardMetric }) => (
       </View>
       <View style={styles.trendContainer}>
         {metric.trend === 'up' ? (
-          <TrendingUp size={16} color="#27AE60" />
+          <TrendingUp size={14} color="#27AE60" />
         ) : (
-          <TrendingDown size={16} color="#E74C3C" />
+          <TrendingDown size={14} color="#E74C3C" />
         )}
         <Text style={[styles.trendText, { color: metric.trend === 'up' ? '#27AE60' : '#E74C3C' }]}>
           {metric.change}
@@ -64,7 +64,7 @@ const AlertCard = ({ alert }: { alert: SystemAlert }) => {
     switch (alert.type) {
       case 'error': return '#E74C3C';
       case 'warning': return '#F39C12';
-      case 'info': return '#3498DB';
+      case 'info': return '#5ce1e6';
       default: return '#666666';
     }
   };
@@ -100,8 +100,8 @@ const DashboardContent = () => {
       value: '12,847',
       change: '+8.2%',
       trend: 'up',
-      icon: <Users size={24} color="#3498DB" />,
-      color: '#3498DB',
+      icon: <Users size={20} color="#5ce1e6" />,
+      color: '#5ce1e6',
       period: 'Last 7 days',
     },
     {
@@ -109,7 +109,7 @@ const DashboardContent = () => {
       value: '1,234',
       change: '+12.5%',
       trend: 'up',
-      icon: <Building2 size={24} color="#27AE60" />,
+      icon: <Building2 size={20} color="#27AE60" />,
       color: '#27AE60',
       period: 'Last 7 days',
     },
@@ -118,8 +118,8 @@ const DashboardContent = () => {
       value: '45,678',
       change: '+15.3%',
       trend: 'up',
-      icon: <MessageCircle size={24} color="#9B59B6" />,
-      color: '#9B59B6',
+      icon: <MessageCircle size={20} color="#E67E22" />,
+      color: '#E67E22',
       period: 'Last 7 days',
     },
     {
@@ -127,8 +127,8 @@ const DashboardContent = () => {
       value: '$89,432',
       change: '+22.1%',
       trend: 'up',
-      icon: <DollarSign size={24} color="#F39C12" />,
-      color: '#F39C12',
+      icon: <DollarSign size={20} color="#FFE66D" />,
+      color: '#FFE66D',
       period: 'Last 7 days',
     },
     {
@@ -136,8 +136,8 @@ const DashboardContent = () => {
       value: '3,456',
       change: '-2.1%',
       trend: 'down',
-      icon: <Activity size={24} color="#E67E22" />,
-      color: '#E67E22',
+      icon: <Activity size={20} color="#8E44AD" />,
+      color: '#8E44AD',
       period: 'Current',
     },
     {
@@ -145,8 +145,8 @@ const DashboardContent = () => {
       value: '99.8%',
       change: '+0.1%',
       trend: 'up',
-      icon: <BarChart3 size={24} color="#1ABC9C" />,
-      color: '#1ABC9C',
+      icon: <Shield size={20} color="#4ECDC4" />,
+      color: '#4ECDC4',
       period: 'Uptime',
     },
   ];
@@ -215,7 +215,7 @@ const DashboardContent = () => {
         <StatusBar barStyle="light-content" backgroundColor="#1A1A1A" />
         
         <View style={[styles.loadingContainer, { marginTop: 60 }]}>
-          <ActivityIndicator size="large" color="#FF6B6B" />
+          <ActivityIndicator size="large" color="#5ce1e6" />
           <Text style={styles.loadingText}>Loading dashboard...</Text>
         </View>
       </View>
@@ -230,7 +230,7 @@ const DashboardContent = () => {
         style={[styles.content, { marginTop: 60 }]} 
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF6B6B" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#5ce1e6" />
         }
       >
         {/* Header Section */}
@@ -264,7 +264,7 @@ const DashboardContent = () => {
             </View>
             
             <TouchableOpacity style={styles.refreshButton} onPress={() => loadDashboardData(true)}>
-              <RefreshCw size={18} color="#FF6B6B" />
+              <RefreshCw size={18} color="#5ce1e6" />
             </TouchableOpacity>
           </View>
         </View>
@@ -287,7 +287,9 @@ const DashboardContent = () => {
               style={styles.actionCard}
               onPress={() => router.push('/dash/cosmos/companies')}
             >
-              <Building2 size={32} color="#27AE60" />
+              <View style={[styles.actionIcon, { backgroundColor: '#27AE6020' }]}>
+                <Building2 size={24} color="#27AE60" />
+              </View>
               <Text style={styles.actionTitle}>Manage Companies</Text>
               <Text style={styles.actionSubtitle}>Create, edit, or block companies</Text>
             </TouchableOpacity>
@@ -296,7 +298,9 @@ const DashboardContent = () => {
               style={styles.actionCard}
               onPress={() => router.push('/dash/cosmos/users')}
             >
-              <Users size={32} color="#3498DB" />
+              <View style={[styles.actionIcon, { backgroundColor: '#5ce1e620' }]}>
+                <Users size={24} color="#5ce1e6" />
+              </View>
               <Text style={styles.actionTitle}>User Management</Text>
               <Text style={styles.actionSubtitle}>View and manage user accounts</Text>
             </TouchableOpacity>
@@ -305,7 +309,9 @@ const DashboardContent = () => {
               style={styles.actionCard}
               onPress={() => router.push('/dash/cosmos/billing')}
             >
-              <DollarSign size={32} color="#F39C12" />
+              <View style={[styles.actionIcon, { backgroundColor: '#FFE66D20' }]}>
+                <DollarSign size={24} color="#FFE66D" />
+              </View>
               <Text style={styles.actionTitle}>Billing Overview</Text>
               <Text style={styles.actionSubtitle}>Monitor platform revenue</Text>
             </TouchableOpacity>
@@ -314,7 +320,9 @@ const DashboardContent = () => {
               style={styles.actionCard}
               onPress={() => router.push('/dash/cosmos/analytics')}
             >
-              <BarChart3 size={32} color="#9B59B6" />
+              <View style={[styles.actionIcon, { backgroundColor: '#8E44AD20' }]}>
+                <BarChart3 size={24} color="#8E44AD" />
+              </View>
               <Text style={styles.actionTitle}>Analytics</Text>
               <Text style={styles.actionSubtitle}>Detailed platform insights</Text>
             </TouchableOpacity>
@@ -345,7 +353,7 @@ const DashboardContent = () => {
           <Text style={styles.sectionTitle}>Recent Activity</Text>
           <View style={styles.activityCard}>
             <View style={styles.activityItem}>
-              <View style={styles.activityIcon}>
+              <View style={[styles.activityIcon, { backgroundColor: '#27AE6020' }]}>
                 <Building2 size={16} color="#27AE60" />
               </View>
               <View style={styles.activityContent}>
@@ -355,8 +363,8 @@ const DashboardContent = () => {
             </View>
             
             <View style={styles.activityItem}>
-              <View style={styles.activityIcon}>
-                <Users size={16} color="#3498DB" />
+              <View style={[styles.activityIcon, { backgroundColor: '#5ce1e620' }]}>
+                <Users size={16} color="#5ce1e6" />
               </View>
               <View style={styles.activityContent}>
                 <Text style={styles.activityTitle}>User verification completed</Text>
@@ -365,13 +373,46 @@ const DashboardContent = () => {
             </View>
             
             <View style={styles.activityItem}>
-              <View style={styles.activityIcon}>
-                <DollarSign size={16} color="#F39C12" />
+              <View style={[styles.activityIcon, { backgroundColor: '#FFE66D20' }]}>
+                <DollarSign size={16} color="#FFE66D" />
               </View>
               <View style={styles.activityContent}>
                 <Text style={styles.activityTitle}>Payment processed</Text>
                 <Text style={styles.activityTime}>$299 subscription • 1 hour ago</Text>
               </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Platform Status */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Platform Status</Text>
+          <View style={styles.statusGrid}>
+            <View style={styles.statusCard}>
+              <View style={styles.statusHeader}>
+                <Zap size={20} color="#4ECDC4" />
+                <Text style={styles.statusTitle}>Performance</Text>
+              </View>
+              <Text style={styles.statusValue}>Excellent</Text>
+              <Text style={styles.statusDescription}>All systems operational</Text>
+            </View>
+            
+            <View style={styles.statusCard}>
+              <View style={styles.statusHeader}>
+                <Shield size={20} color="#27AE60" />
+                <Text style={styles.statusTitle}>Security</Text>
+              </View>
+              <Text style={styles.statusValue}>Secure</Text>
+              <Text style={styles.statusDescription}>No threats detected</Text>
+            </View>
+            
+            <View style={styles.statusCard}>
+              <View style={styles.statusHeader}>
+                <Crown size={20} color="#FFE66D" />
+                <Text style={styles.statusTitle}>Premium</Text>
+              </View>
+              <Text style={styles.statusValue}>Active</Text>
+              <Text style={styles.statusDescription}>All features enabled</Text>
             </View>
           </View>
         </View>
@@ -414,13 +455,15 @@ const styles = StyleSheet.create({
   },
   pageTitle: {
     fontSize: 28,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#FFFFFF',
     marginBottom: 4,
+    letterSpacing: -0.5,
   },
   pageSubtitle: {
     fontSize: 16,
-    color: '#CCCCCC',
+    color: '#888888',
+    fontWeight: '500',
   },
   headerActions: {
     flexDirection: 'row',
@@ -429,22 +472,24 @@ const styles = StyleSheet.create({
   },
   periodSelector: {
     flexDirection: 'row',
-    backgroundColor: '#2A2A2A',
-    borderRadius: 8,
-    padding: 2,
+    backgroundColor: '#1A1A1A',
+    borderRadius: 12,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
   },
   periodButton: {
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: 12,
-    borderRadius: 6,
+    borderRadius: 8,
   },
   activePeriodButton: {
-    backgroundColor: '#FF6B6B',
+    backgroundColor: '#5ce1e6',
   },
   periodButtonText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#CCCCCC',
+    color: '#666666',
   },
   activePeriodButtonText: {
     color: '#FFFFFF',
@@ -454,10 +499,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#2A2A2A',
     borderWidth: 1,
-    borderColor: '#FF6B6B',
+    borderColor: '#5ce1e6',
   },
   section: {
-    padding: 20,
+    paddingHorizontal: 20,
+    marginBottom: 24,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -475,12 +521,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     backgroundColor: '#2A2A2A',
-    borderRadius: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#5ce1e6',
   },
   viewAllText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#FF6B6B',
+    color: '#5ce1e6',
   },
   metricsGrid: {
     flexDirection: 'row',
@@ -502,9 +550,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   metricIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -547,11 +595,18 @@ const styles = StyleSheet.create({
     borderColor: '#2A2A2A',
     alignItems: 'center',
   },
+  actionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   actionTitle: {
     fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginTop: 12,
     marginBottom: 4,
     textAlign: 'center',
   },
@@ -605,11 +660,13 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 6,
     alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#5ce1e6',
   },
   resolveButtonText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#FF6B6B',
+    color: '#5ce1e6',
   },
   activityCard: {
     backgroundColor: '#1A1A1A',
@@ -629,7 +686,6 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: '#2A2A2A',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -646,5 +702,39 @@ const styles = StyleSheet.create({
   activityTime: {
     fontSize: 12,
     color: '#666666',
+  },
+  statusGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  statusCard: {
+    flex: 1,
+    backgroundColor: '#1A1A1A',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  statusHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  statusTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  statusValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  statusDescription: {
+    fontSize: 12,
+    color: '#666666',
+    lineHeight: 16,
   },
 });
