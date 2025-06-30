@@ -747,8 +747,6 @@ export default function CompanyDetailScreen() {
                 <Text style={styles.companyIndustry}>{company.industry}</Text>
               </View>
             </View>
-            
-            <Text style={styles.companyDescription}>{company.description}</Text>
           </View>
         </View>
 
@@ -957,11 +955,6 @@ const styles = StyleSheet.create({
   companyIndustry: {
     fontSize: 16,
     color: '#CCCCCC',
-  },
-  companyDescription: {
-    fontSize: 16,
-    color: '#CCCCCC',
-    lineHeight: 24,
   },
   liveMoodSection: {
     padding: 20,
