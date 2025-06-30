@@ -1191,16 +1191,6 @@ const ClaimCard = ({ claim }: { claim: CompanyClaim }) => {
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'urgent': return '#E74C3C';
-      case 'high': return '#E67E22';
-      case 'medium': return '#F39C12';
-      case 'low': return '#27AE60';
-      default: return '#666666';
-    }
-  };
-
   const userProfile = claim.user_profiles;
 
   return (
@@ -1231,9 +1221,6 @@ const ClaimCard = ({ claim }: { claim: CompanyClaim }) => {
         <View style={styles.claimBadges}>
           <View style={[styles.claimBadge, { backgroundColor: getStatusColor(claim.status) }]}>
             <Text style={styles.claimBadgeText}>{claim.status.replace('_', ' ')}</Text>
-          </View>
-          <View style={[styles.claimBadge, { backgroundColor: getPriorityColor(claim.priority) }]}>
-            <Text style={styles.claimBadgeText}>{claim.priority}</Text>
           </View>
         </View>
       </View>
