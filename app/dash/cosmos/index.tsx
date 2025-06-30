@@ -96,20 +96,6 @@ const LoginForm = () => {
                 </Text>
               </View>
 
-              {/* Demo Credentials */}
-              <View style={styles.demoSection}>
-                <Text style={styles.demoTitle}>Demo Credentials</Text>
-                <View style={styles.demoCredentials}>
-                  <Text style={styles.demoLabel}>Email:</Text>
-                  <Text style={styles.demoValue}>admin@quejapp.com</Text>
-                  <Text style={styles.demoLabel}>Password:</Text>
-                  <Text style={styles.demoValue}>cosmos2024</Text>
-                </View>
-                <Text style={styles.demoNote}>
-                  Full system administration access with all permissions
-                </Text>
-              </View>
-
               {/* Error Display */}
               {error && (
                 <View style={styles.errorContainer}>
@@ -222,6 +208,14 @@ const LoginForm = () => {
                   </View>
                 </View>
               </View>
+
+              {/* Security Notice */}
+              <View style={styles.securityNotice}>
+                <Shield size={16} color="#FF6B6B" />
+                <Text style={styles.securityText}>
+                  Secure superadmin access with full platform permissions
+                </Text>
+              </View>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -304,39 +298,6 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     paddingHorizontal: 20,
   },
-  demoSection: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#FF6B6B',
-  },
-  demoTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FF6B6B',
-    marginBottom: 12,
-  },
-  demoCredentials: {
-    marginBottom: 12,
-  },
-  demoLabel: {
-    fontSize: 14,
-    color: '#CCCCCC',
-    fontWeight: '600',
-  },
-  demoValue: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    fontFamily: 'monospace',
-    marginBottom: 8,
-  },
-  demoNote: {
-    fontSize: 12,
-    color: '#666666',
-    fontStyle: 'italic',
-  },
   errorContainer: {
     backgroundColor: '#2A1A1A',
     borderRadius: 12,
@@ -416,6 +377,7 @@ const styles = StyleSheet.create({
   },
   features: {
     alignItems: 'center',
+    marginBottom: 24,
   },
   featuresTitle: {
     fontSize: 18,
@@ -440,6 +402,22 @@ const styles = StyleSheet.create({
   featureText: {
     fontSize: 16,
     color: '#CCCCCC',
+    fontWeight: '500',
+  },
+  securityNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#1A1A1A',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FF6B6B',
+  },
+  securityText: {
+    fontSize: 12,
+    color: '#FF6B6B',
     fontWeight: '500',
   },
 });

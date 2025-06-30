@@ -35,11 +35,11 @@ interface CosmosAuthProviderProps {
   children: React.ReactNode;
 }
 
-// Mock admin data for demo purposes
-const mockAdmin: AdminProfile = {
-  id: 'admin-1',
+// Main superadmin profile
+const superAdmin: AdminProfile = {
+  id: 'admin-superadmin-1',
   name: 'System Administrator',
-  email: 'admin@quejapp.com',
+  email: 'admin@marcazona.com',
   role: 'superadmin',
   permissions: [
     'manage_companies',
@@ -50,6 +50,7 @@ const mockAdmin: AdminProfile = {
     'manage_warnings',
     'view_analytics',
     'system_settings',
+    'full_access',
   ],
   created_at: new Date().toISOString(),
 };
@@ -142,19 +143,18 @@ export const CosmosAuthProvider: React.FC<CosmosAuthProviderProps> = ({ children
 
       const trimmedEmail = email.trim().toLowerCase();
       
-      // For demo purposes, we'll use simple validation
-      // In production, this would authenticate against a real backend
-      if (trimmedEmail !== 'admin@quejapp.com' || password !== 'cosmos2024') {
+      // Authenticate against the main superadmin credentials
+      if (trimmedEmail !== 'admin@marcazona.com' || password !== 'Betelgeuse2030!') {
         console.log('CosmosAuthContext: Invalid credentials');
-        throw new Error('Invalid credentials. Use admin@quejapp.com / cosmos2024');
+        throw new Error('Invalid credentials. Please check your email and password.');
       }
 
       if (mounted.current) {
-        console.log('CosmosAuthContext: Sign in successful for', mockAdmin.name);
-        setAdmin(mockAdmin);
+        console.log('CosmosAuthContext: Sign in successful for', superAdmin.name);
+        setAdmin(superAdmin);
         
         // Save session to storage
-        const sessionData = JSON.stringify(mockAdmin);
+        const sessionData = JSON.stringify(superAdmin);
         if (Platform.OS === 'web') {
           console.log('CosmosAuthContext: Saving session to web localStorage');
           localStorage.setItem('cosmos_admin_session', sessionData);
