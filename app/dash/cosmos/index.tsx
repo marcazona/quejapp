@@ -14,7 +14,7 @@ import {
   Alert,
 } from 'react-native';
 import { router } from 'expo-router';
-import { Eye, EyeOff, Mail, Lock, ArrowRight, Shield, Users, Building2, BarChart3, AlertTriangle } from 'lucide-react-native';
+import { Eye, EyeOff, Mail, Lock, ArrowRight, Shield, Users, Building2, ChartBar as BarChart3, TriangleAlert as AlertTriangle } from 'lucide-react-native';
 import { useCosmosAuth, CosmosAuthProvider } from '@/contexts/CosmosAuthContext';
 
 const LoginForm = () => {

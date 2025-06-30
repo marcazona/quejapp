@@ -15,7 +15,7 @@ import {
   Switch,
   ActivityIndicator,
 } from 'react-native';
-import { Building2, Plus, Search, Filter, MoreVertical, Shield, Globe, Phone, Mail, MapPin, Edit, Trash2, Ban, CheckCircle, X, Save } from 'lucide-react-native';
+import { Building2, Plus, Search, Filter, MoveVertical as MoreVertical, Shield, Globe, Phone, Mail, MapPin, CreditCard as Edit, Trash2, Ban, CircleCheck as CheckCircle, X, Save } from 'lucide-react-native';
 import { useCosmosAuth } from '@/contexts/CosmosAuthContext';
 import { supabase } from '@/lib/supabase';
 
