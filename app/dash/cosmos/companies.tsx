@@ -212,6 +212,7 @@ const CompanyModal = ({
     is_active: true,
   });
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
 
   useEffect(() => {
     if (company) {
@@ -239,11 +240,34 @@ const CompanyModal = ({
         is_active: true,
       });
     }
-  }, [company]);
+    setErrors({});
+  }, [company, visible]);
+
+  const validateForm = () => {
+    const newErrors: {[key: string]: string} = {};
+    
+    if (!formData.name.trim()) {
+      newErrors.name = 'Company name is required';
+    }
+    
+    if (!formData.industry.trim()) {
+      newErrors.industry = 'Industry is required';
+    }
+    
+    if (formData.website && !formData.website.includes('.')) {
+      newErrors.website = 'Please enter a valid website URL';
+    }
+    
+    if (formData.email && !formData.email.includes('@')) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSave = async () => {
-    if (!formData.name.trim() || !formData.industry.trim()) {
-      Alert.alert('Error', 'Company name and industry are required');
+    if (!validateForm()) {
       return;
     }
 
@@ -253,6 +277,7 @@ const CompanyModal = ({
       onClose();
     } catch (error) {
       console.error('Error saving company:', error);
+      Alert.alert('Error', 'Failed to save company. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -285,13 +310,19 @@ const CompanyModal = ({
           <View style={styles.formGroup}>
             <Text style={styles.label}>Company Name *</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, errors.name ? styles.inputError : null]}
               value={formData.name}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
+              onChangeText={(text) => {
+                setFormData(prev => ({ ...prev, name: text }));
+                if (errors.name) {
+                  setErrors(prev => ({ ...prev, name: undefined }));
+                }
+              }}
               placeholder="Enter company name"
               placeholderTextColor="#666666"
               editable={!saving}
             />
+            {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
           </View>
 
           <View style={styles.formGroup}>
@@ -311,39 +342,57 @@ const CompanyModal = ({
           <View style={styles.formGroup}>
             <Text style={styles.label}>Industry *</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, errors.industry ? styles.inputError : null]}
               value={formData.industry}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, industry: text }))}
+              onChangeText={(text) => {
+                setFormData(prev => ({ ...prev, industry: text }));
+                if (errors.industry) {
+                  setErrors(prev => ({ ...prev, industry: undefined }));
+                }
+              }}
               placeholder="e.g., Technology, Healthcare"
               placeholderTextColor="#666666"
               editable={!saving}
             />
+            {errors.industry && <Text style={styles.errorText}>{errors.industry}</Text>}
           </View>
 
           <View style={styles.formGroup}>
             <Text style={styles.label}>Website</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, errors.website ? styles.inputError : null]}
               value={formData.website}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, website: text }))}
+              onChangeText={(text) => {
+                setFormData(prev => ({ ...prev, website: text }));
+                if (errors.website) {
+                  setErrors(prev => ({ ...prev, website: undefined }));
+                }
+              }}
               placeholder="https://company.com"
               placeholderTextColor="#666666"
               keyboardType="url"
               editable={!saving}
             />
+            {errors.website && <Text style={styles.errorText}>{errors.website}</Text>}
           </View>
 
           <View style={styles.formGroup}>
             <Text style={styles.label}>Email</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, errors.email ? styles.inputError : null]}
               value={formData.email}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, email: text }))}
+              onChangeText={(text) => {
+                setFormData(prev => ({ ...prev, email: text }));
+                if (errors.email) {
+                  setErrors(prev => ({ ...prev, email: undefined }));
+                }
+              }}
               placeholder="contact@company.com"
               placeholderTextColor="#666666"
               keyboardType="email-address"
               editable={!saving}
             />
+            {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
           </View>
 
           <View style={styles.formGroup}>
@@ -443,18 +492,20 @@ const CompaniesContent = () => {
 
   const handleCreateCompany = async (companyData: Partial<Company>) => {
     try {
+      console.log('Creating company with data:', companyData);
+      
       const { data, error } = await supabase
         .from('companies')
         .insert([{
           name: companyData.name,
-          description: companyData.description,
+          description: companyData.description || '',
           industry: companyData.industry,
-          website: companyData.website,
-          phone: companyData.phone,
-          email: companyData.email,
-          logo_url: companyData.logo_url,
-          verified: companyData.verified,
-          is_active: companyData.is_active,
+          website: companyData.website || null,
+          phone: companyData.phone || null,
+          email: companyData.email || null,
+          logo_url: companyData.logo_url || null,
+          verified: companyData.verified || false,
+          is_active: companyData.is_active !== undefined ? companyData.is_active : true,
           rating: null,
           total_reviews: 0,
           total_claims: 0,
@@ -463,17 +514,18 @@ const CompaniesContent = () => {
 
       if (error) {
         console.error('Error creating company:', error);
-        Alert.alert('Error', 'Failed to create company');
+        Alert.alert('Error', `Failed to create company: ${error.message}`);
         return;
       }
 
       if (data && data.length > 0) {
+        console.log('Company created successfully:', data[0]);
         setCompanies(prev => [data[0], ...prev]);
         Alert.alert('Success', 'Company created successfully');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating company:', error);
-      Alert.alert('Error', 'Failed to create company');
+      Alert.alert('Error', `Failed to create company: ${error.message || 'Unknown error'}`);
     }
   };
 
@@ -481,16 +533,18 @@ const CompaniesContent = () => {
     if (!editingCompany) return;
 
     try {
+      console.log('Updating company with data:', companyData);
+      
       const { data, error } = await supabase
         .from('companies')
         .update({
           name: companyData.name,
           description: companyData.description,
           industry: companyData.industry,
-          website: companyData.website,
-          phone: companyData.phone,
-          email: companyData.email,
-          logo_url: companyData.logo_url,
+          website: companyData.website || null,
+          phone: companyData.phone || null,
+          email: companyData.email || null,
+          logo_url: companyData.logo_url || null,
           verified: companyData.verified,
           is_active: companyData.is_active,
         })
@@ -499,7 +553,7 @@ const CompaniesContent = () => {
 
       if (error) {
         console.error('Error updating company:', error);
-        Alert.alert('Error', 'Failed to update company');
+        Alert.alert('Error', `Failed to update company: ${error.message}`);
         return;
       }
 
@@ -508,9 +562,9 @@ const CompaniesContent = () => {
         setEditingCompany(null);
         Alert.alert('Success', 'Company updated successfully');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating company:', error);
-      Alert.alert('Error', 'Failed to update company');
+      Alert.alert('Error', `Failed to update company: ${error.message || 'Unknown error'}`);
     }
   };
 
@@ -532,15 +586,15 @@ const CompaniesContent = () => {
 
               if (error) {
                 console.error('Error deleting company:', error);
-                Alert.alert('Error', 'Failed to delete company');
+                Alert.alert('Error', `Failed to delete company: ${error.message}`);
                 return;
               }
 
               setCompanies(prev => prev.filter(c => c.id !== company.id));
               Alert.alert('Success', 'Company deleted successfully');
-            } catch (error) {
+            } catch (error: any) {
               console.error('Error deleting company:', error);
-              Alert.alert('Error', 'Failed to delete company');
+              Alert.alert('Error', `Failed to delete company: ${error.message || 'Unknown error'}`);
             }
           },
         },
@@ -568,7 +622,7 @@ const CompaniesContent = () => {
 
               if (error) {
                 console.error('Error updating company status:', error);
-                Alert.alert('Error', 'Failed to update company status');
+                Alert.alert('Error', `Failed to update company status: ${error.message}`);
                 return;
               }
 
@@ -576,9 +630,9 @@ const CompaniesContent = () => {
                 c.id === company.id ? { ...c, is_active: newStatus } : c
               ));
               Alert.alert('Success', `Company ${action}ed successfully`);
-            } catch (error) {
+            } catch (error: any) {
               console.error('Error updating company status:', error);
-              Alert.alert('Error', 'Failed to update company status');
+              Alert.alert('Error', `Failed to update company status: ${error.message || 'Unknown error'}`);
             }
           },
         },
@@ -606,7 +660,7 @@ const CompaniesContent = () => {
 
               if (error) {
                 console.error('Error updating company verification:', error);
-                Alert.alert('Error', 'Failed to update company verification');
+                Alert.alert('Error', `Failed to update company verification: ${error.message}`);
                 return;
               }
 
@@ -614,9 +668,9 @@ const CompaniesContent = () => {
                 c.id === company.id ? { ...c, verified: newVerified } : c
               ));
               Alert.alert('Success', `Company verification ${newVerified ? 'added' : 'removed'} successfully`);
-            } catch (error) {
+            } catch (error: any) {
               console.error('Error updating company verification:', error);
-              Alert.alert('Error', 'Failed to update company verification');
+              Alert.alert('Error', `Failed to update company verification: ${error.message || 'Unknown error'}`);
             }
           },
         },
@@ -1053,6 +1107,16 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#3A3A3A',
+  },
+  inputError: {
+    borderColor: '#E74C3C',
+    borderWidth: 1,
+  },
+  errorText: {
+    color: '#E74C3C',
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 4,
   },
   textArea: {
     backgroundColor: '#2A2A2A',
