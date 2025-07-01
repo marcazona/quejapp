@@ -19,7 +19,6 @@ import {
 import { useLocalSearchParams, router } from 'expo-router';
 import { ArrowLeft, MapPin, Phone, Mail, Globe, Star, MessageCircle, Shield, Clock, Users, Building2, Send, X, Plus, User } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import { LiveMoodWidget } from '@/components/LiveMoodWidget';
 import {
   getCompanyById,
   createCompanyReview,
@@ -192,7 +191,7 @@ export default function CompanyProfileScreen() {
   const [company, setCompany] = useState<FullCompanyProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'reviews' | 'claims'>('overview');
+  const [activeTab, setActiveTab] = useState<'reviews' | 'claims'>('reviews');
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [reviewData, setReviewData] = useState<ReviewModalData>({
@@ -464,16 +463,6 @@ export default function CompanyProfileScreen() {
             )}
           </View>
 
-          {/* LiveMood Widget - HIDDEN */}
-          {/* 
-          <LiveMoodWidget 
-            companyId={company.id}
-            companyName={company.name}
-            showTitle={true}
-            compact={false}
-          />
-          */}
-
           {/* Action Buttons */}
           <View style={styles.actionButtons}>
             <TouchableOpacity 
@@ -496,15 +485,6 @@ export default function CompanyProfileScreen() {
           {/* Tabs */}
           <View style={styles.tabsContainer}>
             <TouchableOpacity 
-              style={[styles.tab, activeTab === 'overview' && styles.activeTab]}
-              onPress={() => setActiveTab('overview')}
-            >
-              <Text style={[styles.tabText, activeTab === 'overview' && styles.activeTabText]}>
-                Overview
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
               style={[styles.tab, activeTab === 'reviews' && styles.activeTab]}
               onPress={() => setActiveTab('reviews')}
             >
@@ -525,31 +505,6 @@ export default function CompanyProfileScreen() {
 
           {/* Tab Content */}
           <View style={styles.tabContent}>
-            {activeTab === 'overview' && (
-              <View style={styles.overviewContent}>
-                <View style={styles.statsGrid}>
-                  <View style={styles.statCard}>
-                    <Text style={styles.statValue}>{company.total_reviews || 0}</Text>
-                    <Text style={styles.statLabel}>Reviews</Text>
-                  </View>
-                  <View style={styles.statCard}>
-                    <Text style={styles.statValue}>{company.total_claims || 0}</Text>
-                    <Text style={styles.statLabel}>Claims</Text>
-                  </View>
-                  <View style={styles.statCard}>
-                    <Text style={styles.statValue}>{company.rating ? company.rating.toFixed(1) : 'N/A'}</Text>
-                    <Text style={styles.statLabel}>Rating</Text>
-                  </View>
-                </View>
-                
-                <Text style={styles.overviewText}>
-                  {company.name} is a {company.industry.toLowerCase()} company 
-                  {company.verified ? ' with verified status' : ''}. 
-                  {company.description}
-                </Text>
-              </View>
-            )}
-
             {activeTab === 'reviews' && (
               <View style={styles.reviewsContent}>
                 {company.reviews && company.reviews.length > 0 ? (
@@ -995,38 +950,6 @@ const styles = StyleSheet.create({
   },
   tabContent: {
     flex: 1,
-  },
-  overviewContent: {
-    padding: 20,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    marginBottom: 20,
-    gap: 12,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#1A1A1A',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#2A2A2A',
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#666666',
-  },
-  overviewText: {
-    fontSize: 16,
-    color: '#CCCCCC',
-    lineHeight: 24,
   },
   reviewsContent: {
     padding: 20,
