@@ -12,11 +12,11 @@ import {
   ActivityIndicator,
   Modal,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { ArrowLeft, Send, MessageCircle, Shield, Plus, ThumbsUp, ThumbsDown, TrendingUp, TrendingDown } from 'lucide-react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '@/contexts/AuthContext';
+import { LiveMoodWidget } from '@/components/LiveMoodWidget';
 
 interface ChatMessage {
   id: string;
@@ -45,15 +45,6 @@ interface Company {
   verified: boolean;
 }
 
-interface LiveMoodData {
-  totalVotes: number;
-  positiveVotes: number;
-  negativeVotes: number;
-  userVote: 'positive' | 'negative' | null;
-  trend: 'up' | 'down' | 'stable';
-  lastUpdated: string;
-}
-
 // Customer service related emojis
 const REACTION_EMOJIS = [
   { emoji: '👍', label: 'Helpful' },
@@ -62,286 +53,6 @@ const REACTION_EMOJIS = [
   { emoji: '🙏', label: 'Thank you' },
   { emoji: '⭐', label: 'Excellent' },
 ];
-
-// LiveMood component for chat
-const ChatLiveMood = ({ companyId, companyName }: { companyId: string; companyName: string }) => {
-  const { user } = useAuth();
-  const [moodData, setMoodData] = useState<LiveMoodData>({
-    totalVotes: 247,
-    positiveVotes: 156,
-    negativeVotes: 91,
-    userVote: null,
-    trend: 'up',
-    lastUpdated: new Date().toISOString(),
-  });
-  const [isVoting, setIsVoting] = useState(false);
-  const [showMoodSection, setShowMoodSection] = useState(true);
-
-  // Load user's existing vote when component mounts
-  useEffect(() => {
-    loadUserVote();
-  }, [companyId, user]);
-
-  const loadUserVote = async () => {
-    if (!user) return;
-    
-    try {
-      // Check localStorage for user's vote on this company
-      const storageKey = `livemood_vote_${companyId}_${user.id}`;
-      let existingVote: string | null = null;
-      
-      if (Platform.OS === 'web') {
-        existingVote = localStorage.getItem(storageKey);
-      } else {
-        existingVote = await AsyncStorage.getItem(storageKey);
-      }
-      
-      if (existingVote) {
-        const voteData = JSON.parse(existingVote);
-        setMoodData(prev => ({
-          ...prev,
-          userVote: voteData.vote,
-        }));
-      }
-    } catch (error) {
-      console.error('Error loading user vote:', error);
-    }
-  };
-
-  const saveUserVote = async (vote: 'positive' | 'negative' | null) => {
-    if (!user) return;
-    
-    try {
-      const storageKey = `livemood_vote_${companyId}_${user.id}`;
-      
-      if (vote === null) {
-        if (Platform.OS === 'web') {
-          localStorage.removeItem(storageKey);
-        } else {
-          await AsyncStorage.removeItem(storageKey);
-        }
-      } else {
-        const voteData = {
-          vote,
-          timestamp: new Date().toISOString(),
-          companyId,
-          userId: user.id,
-        };
-        if (Platform.OS === 'web') {
-          localStorage.setItem(storageKey, JSON.stringify(voteData));
-        } else {
-          await AsyncStorage.setItem(storageKey, JSON.stringify(voteData));
-        }
-      }
-    } catch (error) {
-      console.error('Error saving user vote:', error);
-    }
-  };
-
-  const positivePercentage = moodData.totalVotes > 0 ? (moodData.positiveVotes / moodData.totalVotes) * 100 : 0;
-  const negativePercentage = moodData.totalVotes > 0 ? (moodData.negativeVotes / moodData.totalVotes) * 100 : 0;
-
-  const handleVote = async (voteType: 'positive' | 'negative') => {
-    if (!user) {
-      // Show sign-in prompt
-      return;
-    }
-    
-    if (isVoting) return;
-
-    setIsVoting(true);
-
-    try {
-      const previousVote = moodData.userVote;
-      const newVote = previousVote === voteType ? null : voteType;
-
-      setMoodData(prev => {
-        let newPositiveVotes = prev.positiveVotes;
-        let newNegativeVotes = prev.negativeVotes;
-        let newTotalVotes = prev.totalVotes;
-
-        // Remove previous vote if exists
-        if (prev.userVote === 'positive') {
-          newPositiveVotes--;
-          newTotalVotes--;
-        } else if (prev.userVote === 'negative') {
-          newNegativeVotes--;
-          newTotalVotes--;
-        }
-
-        // Add new vote if it's different from previous
-        if (newVote !== null) {
-          if (newVote === 'positive') {
-            newPositiveVotes++;
-          } else {
-            newNegativeVotes++;
-          }
-          newTotalVotes++;
-        }
-
-        // Calculate trend
-        const newPositivePercentage = newTotalVotes > 0 ? (newPositiveVotes / newTotalVotes) * 100 : 0;
-        const oldPositivePercentage = prev.totalVotes > 0 ? (prev.positiveVotes / prev.totalVotes) * 100 : 0;
-        
-        let newTrend: 'up' | 'down' | 'stable' = 'stable';
-        if (newPositivePercentage > oldPositivePercentage + 2) {
-          newTrend = 'up';
-        } else if (newPositivePercentage < oldPositivePercentage - 2) {
-          newTrend = 'down';
-        }
-
-        return {
-          totalVotes: newTotalVotes,
-          positiveVotes: newPositiveVotes,
-          negativeVotes: newNegativeVotes,
-          userVote: newVote,
-          trend: newTrend,
-          lastUpdated: new Date().toISOString(),
-        };
-      });
-
-      // Save vote to localStorage for persistence
-      await saveUserVote(newVote);
-      
-      // Simulate API call to backend
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-    } catch (error) {
-      console.error('Failed to submit vote:', error);
-      // Revert the vote on error
-      setMoodData(prev => ({
-        ...prev,
-        userVote: previousVote,
-      }));
-      await saveUserVote(previousVote);
-    } finally {
-      setIsVoting(false);
-    }
-  };
-
-  const getTrendIcon = () => {
-    switch (moodData.trend) {
-      case 'up':
-        return <TrendingUp size={12} color="#27AE60" />;
-      case 'down':
-        return <TrendingDown size={12} color="#E74C3C" />;
-      default:
-        return null;
-    }
-  };
-
-  const getTrendColor = () => {
-    switch (moodData.trend) {
-      case 'up':
-        return '#27AE60';
-      case 'down':
-        return '#E74C3C';
-      default:
-        return '#666666';
-    }
-  };
-
-  if (!showMoodSection) return null;
-
-  return (
-    <View style={styles.chatLiveMoodContainer}>
-      <View style={styles.chatLiveMoodHeader}>
-        <View style={styles.chatLiveMoodTitleRow}>
-          <Text style={styles.chatLiveMoodTitle}>LiveMood</Text>
-          <View style={styles.chatLiveMoodTrend}>
-            {getTrendIcon()}
-            <Text style={[styles.chatLiveMoodTrendText, { color: getTrendColor() }]}>
-              {moodData.trend === 'up' ? 'Improving' : moodData.trend === 'down' ? 'Declining' : 'Stable'}
-            </Text>
-          </View>
-        </View>
-        <TouchableOpacity 
-          style={styles.chatLiveMoodClose}
-          onPress={() => setShowMoodSection(false)}
-        >
-          <Text style={styles.chatLiveMoodCloseText}>×</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Compact Mood Bar */}
-      <View style={styles.chatMoodBar}>
-        <View 
-          style={[
-            styles.chatMoodBarFill, 
-            styles.chatMoodBarPositive,
-            { width: `${positivePercentage}%` }
-          ]} 
-        />
-        <View 
-          style={[
-            styles.chatMoodBarFill, 
-            styles.chatMoodBarNegative,
-            { width: `${negativePercentage}%`, right: 0, position: 'absolute' }
-          ]} 
-        />
-      </View>
-
-      {/* Compact Stats */}
-
-      {/* Voting Buttons */}
-      <View style={styles.chatMoodVoting}>
-        <View style={styles.chatMoodVotingButtons}>
-          <TouchableOpacity
-            style={[
-              styles.chatMoodVoteButton,
-              styles.chatMoodVoteButtonPositive,
-              moodData.userVote === 'positive' && styles.chatMoodVoteButtonActive,
-              isVoting && styles.chatMoodVoteButtonDisabled,
-            ]}
-            onPress={() => handleVote('positive')}
-            disabled={isVoting}
-          >
-            <ThumbsUp 
-              size={16} 
-              color={moodData.userVote === 'positive' ? '#FFFFFF' : '#27AE60'} 
-              fill={moodData.userVote === 'positive' ? '#FFFFFF' : 'transparent'}
-            />
-            <Text style={[
-              styles.chatMoodVoteButtonText,
-              moodData.userVote === 'positive' && styles.chatMoodVoteButtonTextActive
-            ]}>
-              Good
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.chatMoodVoteButton,
-              styles.chatMoodVoteButtonNegative,
-              moodData.userVote === 'negative' && styles.chatMoodVoteButtonActive,
-              isVoting && styles.chatMoodVoteButtonDisabled,
-            ]}
-            onPress={() => handleVote('negative')}
-            disabled={isVoting}
-          >
-            <ThumbsDown 
-              size={16} 
-              color={moodData.userVote === 'negative' ? '#FFFFFF' : '#E74C3C'} 
-              fill={moodData.userVote === 'negative' ? '#FFFFFF' : 'transparent'}
-            />
-            <Text style={[
-              styles.chatMoodVoteButtonText,
-              moodData.userVote === 'negative' && styles.chatMoodVoteButtonTextActive
-            ]}>
-              Bad
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {moodData.userVote && (
-        <Text style={styles.chatMoodVoteStatus}>
-          You voted: {moodData.userVote === 'positive' ? 'Good' : 'Bad'} • Tap again to change
-        </Text>
-      )}
-    </View>
-  );
-};
 
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -693,9 +404,16 @@ export default function ChatScreen() {
         </View>
       </View>
 
-      {/* LiveMood Section */}
+      {/* LiveMood Widget */}
       {company && (
-        <ChatLiveMood companyId={company.id} companyName={company.name} />
+        <View style={styles.liveMoodContainer}>
+          <LiveMoodWidget 
+            companyId={company.id} 
+            companyName={company.name}
+            compact={true}
+            showTitle={true}
+          />
+        </View>
       )}
 
       {/* Messages */}
@@ -781,136 +499,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
   },
-  // Chat LiveMood Styles
-  chatLiveMoodContainer: {
-    backgroundColor: '#1A1A1A',
-    marginHorizontal: 16,
-    marginVertical: 4,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#2A2A2A',
-  },
-  chatLiveMoodHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  chatLiveMoodTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    flex: 1,
-  },
-  chatLiveMoodTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  chatLiveMoodTrend: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-  chatLiveMoodTrendText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  chatLiveMoodClose: {
-    padding: 2,
-  },
-  chatLiveMoodCloseText: {
-    fontSize: 16,
-    color: '#666666',
-    fontWeight: '300',
-  },
-  chatMoodBar: {
-    height: 4,
-    backgroundColor: '#2A2A2A',
-    borderRadius: 2,
-    overflow: 'hidden',
-    marginBottom: 6,
-    position: 'relative',
-  },
-  chatMoodBarFill: {
-    height: '100%',
-    position: 'absolute',
-    top: 0,
-  },
-  chatMoodBarPositive: {
-    backgroundColor: '#27AE60',
-    left: 0,
-  },
-  chatMoodBarNegative: {
-    backgroundColor: '#E74C3C',
-  },
-  chatMoodStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  chatMoodStat: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-  chatMoodStatText: {
-    fontSize: 11,
-    color: '#CCCCCC',
-    fontWeight: '500',
-  },
-  chatMoodVoting: {
-    marginBottom: 4,
-  },
-  chatMoodVotingTitle: {
-    fontSize: 12,
-    color: '#FFFFFF',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  chatMoodVotingButtons: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  chatMoodVoteButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-  chatMoodVoteButtonPositive: {
-    borderColor: '#27AE60',
-    backgroundColor: 'transparent',
-  },
-  chatMoodVoteButtonNegative: {
-    borderColor: '#E74C3C',
-    backgroundColor: 'transparent',
-  },
-  chatMoodVoteButtonActive: {
-    backgroundColor: '#27AE60',
-  },
-  chatMoodVoteButtonDisabled: {
-    opacity: 0.5,
-  },
-  chatMoodVoteButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  chatMoodVoteButtonTextActive: {
-    color: '#FFFFFF',
-  },
-  chatMoodVoteStatus: {
-    fontSize: 10,
-    color: '#666666',
-    textAlign: 'center',
-    marginTop: 4,
+  liveMoodContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
   },
   messagesList: {
     flex: 1,
