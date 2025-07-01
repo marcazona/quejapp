@@ -17,7 +17,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { ArrowLeft, Star, MapPin, Phone, Mail, Globe, MessageCircle, Shield, Clock, User, Send, X, Plus, Flag, Heart, Share, Building2, Users, TrendingUp, Award, CheckCircle, AlertTriangle, Calendar, FileText, Camera, Edit3 } from 'lucide-react-native';
+import { ArrowLeft, Star, MapPin, Phone, Mail, Globe, MessageCircle, Shield, Clock, User, Send, X, Plus, Flag, Heart, Share, Building2, Users, TrendingUp, Award, CircleCheck as CheckCircle, TriangleAlert as AlertTriangle, Calendar, FileText, Camera, CreditCard as Edit3 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   getCompanyById,
