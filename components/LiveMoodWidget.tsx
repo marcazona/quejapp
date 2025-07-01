@@ -7,16 +7,17 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Platform,
 } from 'react-native';
 import { ThumbsUp, ThumbsDown, TrendingUp, TrendingDown, Minus, X } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getCompanyLiveMood,
   submitCompanyVote,
   removeCompanyVote,
   type LiveMoodData,
   type ExperienceCategory,
-  EXPERIENCE_CATEGORIES,
 } from '@/lib/livemood';
 
 interface LiveMoodWidgetProps {
@@ -57,13 +58,88 @@ export const LiveMoodWidget: React.FC<LiveMoodWidgetProps> = ({
   const loadMoodData = async () => {
     try {
       setIsLoading(true);
-      const data = await getCompanyLiveMood(companyId, user?.id);
-      setMoodData(data);
-      onVoteChange?.(data);
+      
+      // Try to get data from database first
+      try {
+        const data = await getCompanyLiveMood(companyId, user?.id);
+        setMoodData(data);
+        onVoteChange?.(data);
+        return;
+      } catch (dbError) {
+        console.log('Failed to get mood data from database, falling back to local storage', dbError);
+      }
+      
+      // Fallback to local storage if database fails
+      let localData: LiveMoodData | null = null;
+      
+      // Check localStorage for user's vote on this company
+      const storageKey = `livemood_data_${companyId}`;
+      
+      if (Platform.OS === 'web') {
+        const storedData = localStorage.getItem(storageKey);
+        if (storedData) {
+          localData = JSON.parse(storedData);
+        }
+      } else {
+        const storedData = await AsyncStorage.getItem(storageKey);
+        if (storedData) {
+          localData = JSON.parse(storedData);
+        }
+      }
+      
+      if (localData) {
+        setMoodData(localData);
+        onVoteChange?.(localData);
+      }
     } catch (error) {
       console.error('Error loading mood data:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const saveLocalMoodData = async (data: LiveMoodData) => {
+    try {
+      const storageKey = `livemood_data_${companyId}`;
+      
+      if (Platform.OS === 'web') {
+        localStorage.setItem(storageKey, JSON.stringify(data));
+      } else {
+        await AsyncStorage.setItem(storageKey, JSON.stringify(data));
+      }
+    } catch (error) {
+      console.error('Error saving mood data locally:', error);
+    }
+  };
+
+  const saveUserVote = async (vote: 'positive' | 'negative' | null) => {
+    if (!user) return;
+    
+    try {
+      const storageKey = `livemood_vote_${companyId}_${user.id}`;
+      
+      if (vote === null) {
+        if (Platform.OS === 'web') {
+          localStorage.removeItem(storageKey);
+        } else {
+          await AsyncStorage.removeItem(storageKey);
+        }
+      } else {
+        const voteData = {
+          vote,
+          timestamp: new Date().toISOString(),
+          companyId,
+          userId: user.id,
+        };
+        
+        if (Platform.OS === 'web') {
+          localStorage.setItem(storageKey, JSON.stringify(voteData));
+        } else {
+          await AsyncStorage.setItem(storageKey, JSON.stringify(voteData));
+        }
+      }
+    } catch (error) {
+      console.error('Error saving user vote:', error);
     }
   };
 
@@ -78,33 +154,104 @@ export const LiveMoodWidget: React.FC<LiveMoodWidgetProps> = ({
     setIsVoting(true);
 
     try {
-      // If user is changing their vote or voting for the first time
-      if (moodData.userVote !== voteType) {
-        await submitCompanyVote(companyId, user.id, voteType, 'general');
-        
-        // Animate the vote
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.2,
-            duration: 150,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 150,
-            useNativeDriver: true,
-          }),
-        ]).start();
-      } else {
-        // User is removing their vote
-        await removeCompanyVote(companyId, user.id);
-      }
+      const previousVote = moodData.userVote;
+      const newVote = previousVote === voteType ? null : voteType;
 
-      // Reload data to get updated stats
-      await loadMoodData();
-    } catch (error: any) {
-      console.error('Error voting:', error);
-      Alert.alert('Error', 'Failed to submit vote. Please try again.');
+      // Update local state immediately for responsive UI
+      setMoodData(prev => {
+        let newPositiveVotes = prev.positiveVotes;
+        let newNegativeVotes = prev.negativeVotes;
+        let newTotalVotes = prev.totalVotes;
+
+        // Remove previous vote if exists
+        if (prev.userVote === 'positive') {
+          newPositiveVotes--;
+          newTotalVotes--;
+        } else if (prev.userVote === 'negative') {
+          newNegativeVotes--;
+          newTotalVotes--;
+        }
+
+        // Add new vote if it's different from previous
+        if (newVote !== null) {
+          if (newVote === 'positive') {
+            newPositiveVotes++;
+          } else {
+            newNegativeVotes++;
+          }
+          newTotalVotes++;
+        }
+
+        // Calculate percentages
+        const newPositivePercentage = newTotalVotes > 0 ? (newPositiveVotes / newTotalVotes) * 100 : 0;
+        const newNegativePercentage = newTotalVotes > 0 ? (newNegativeVotes / newTotalVotes) * 100 : 0;
+        
+        // Calculate trend
+        const oldPositivePercentage = prev.totalVotes > 0 ? (prev.positiveVotes / prev.totalVotes) * 100 : 0;
+        
+        let newTrend: 'up' | 'down' | 'stable' = 'stable';
+        if (newPositivePercentage > oldPositivePercentage + 1) {
+          newTrend = 'up';
+        } else if (newPositivePercentage < oldPositivePercentage - 1) {
+          newTrend = 'down';
+        }
+
+        const updatedData = {
+          totalVotes: newTotalVotes,
+          positiveVotes: newPositiveVotes,
+          negativeVotes: newNegativeVotes,
+          userVote: newVote,
+          trend: newTrend,
+          lastUpdated: new Date().toISOString(),
+          positivePercentage: newPositivePercentage,
+          negativePercentage: newNegativePercentage,
+        };
+        
+        // Save to local storage as backup
+        saveLocalMoodData(updatedData);
+        
+        return updatedData;
+      });
+
+      // Animate the vote
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.1,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Save vote to localStorage for persistence
+      await saveUserVote(newVote);
+      
+      // Submit to database
+      try {
+        if (newVote !== null) {
+          await submitCompanyVote(companyId, user.id, newVote, 'general');
+        } else {
+          await removeCompanyVote(companyId, user.id);
+        }
+        
+        // Refresh data from database to get updated stats
+        await loadMoodData();
+      } catch (dbError) {
+        console.error('Failed to submit vote to database:', dbError);
+        // We already updated the UI, so we don't need to show an error to the user
+      }
+      
+      // Notify parent component
+      if (onVoteChange) {
+        onVoteChange(moodData);
+      }
+    } catch (error) {
+      console.error('Failed to submit vote:', error);
+      Alert.alert('Error', 'Failed to submit your vote. Please try again.');
     } finally {
       setIsVoting(false);
     }
