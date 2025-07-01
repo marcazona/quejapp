@@ -41,7 +41,6 @@ interface ClaimModalData {
   title: string;
   description: string;
   category: string;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
 }
 
 const ReviewCard = ({ review }: { review: CompanyReview }) => {
@@ -121,15 +120,6 @@ const ClaimCard = ({ claim }: { claim: CompanyClaim }) => {
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'urgent': return '#E74C3C';
-      case 'high': return '#E67E22';
-      case 'medium': return '#F39C12';
-      default: return '#95A5A6';
-    }
-  };
-
   const getTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -162,9 +152,6 @@ const ClaimCard = ({ claim }: { claim: CompanyClaim }) => {
           </View>
         </View>
         <View style={styles.claimBadges}>
-          <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(claim.priority) }]}>
-            <Text style={styles.badgeText}>{claim.priority}</Text>
-          </View>
           <View style={[styles.statusBadge, { backgroundColor: getStatusColor(claim.status) }]}>
             <Text style={styles.badgeText}>{claim.status.replace('_', ' ')}</Text>
           </View>
@@ -203,7 +190,6 @@ export default function CompanyProfileScreen() {
     title: '',
     description: '',
     category: 'General',
-    priority: 'medium',
   });
 
   useEffect(() => {
@@ -298,11 +284,11 @@ export default function CompanyProfileScreen() {
         claimData.title,
         claimData.description,
         claimData.category,
-        claimData.priority
+        'medium' // Default priority
       );
       
       setShowClaimModal(false);
-      setClaimData({ title: '', description: '', category: 'General', priority: 'medium' });
+      setClaimData({ title: '', description: '', category: 'General' });
       Alert.alert('Success', 'Your claim has been submitted successfully!');
       loadCompanyData();
     } catch (error) {
@@ -666,34 +652,6 @@ export default function CompanyProfileScreen() {
                         claimData.category === category && styles.selectedCategoryText
                       ]}>
                         {category}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>Priority</Text>
-                <View style={styles.prioritySelector}>
-                  {[
-                    { key: 'low', label: 'Low', color: '#95A5A6' },
-                    { key: 'medium', label: 'Medium', color: '#F39C12' },
-                    { key: 'high', label: 'High', color: '#E67E22' },
-                    { key: 'urgent', label: 'Urgent', color: '#E74C3C' },
-                  ].map((priority) => (
-                    <TouchableOpacity
-                      key={priority.key}
-                      style={[
-                        styles.priorityButton,
-                        claimData.priority === priority.key && { backgroundColor: priority.color }
-                      ]}
-                      onPress={() => setClaimData(prev => ({ ...prev, priority: priority.key as any }))}
-                    >
-                      <Text style={[
-                        styles.priorityText,
-                        claimData.priority === priority.key && styles.selectedPriorityText
-                      ]}>
-                        {priority.label}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -1073,12 +1031,6 @@ const styles = StyleSheet.create({
   claimBadges: {
     gap: 4,
   },
-  priorityBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-    alignSelf: 'flex-end',
-  },
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -1235,24 +1187,5 @@ const styles = StyleSheet.create({
   },
   selectedCategoryText: {
     color: '#FFFFFF',
-  },
-  prioritySelector: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  priorityButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#2A2A2A',
-    borderWidth: 1,
-    borderColor: '#3A3A3A',
-  },
-  priorityText: {
-    fontSize: 14,
-    color: '#CCCCCC',
-  },
-  selectedPriorityText: {
-    color: '#FFFFFF',
-  },
+  }
 });
