@@ -191,7 +191,7 @@ export default function CompanyProfileScreen() {
   const [company, setCompany] = useState<FullCompanyProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'reviews' | 'claims'>('reviews');
+  const [activeTab, setActiveTab] = useState<'qdles' | 'claims'>('qdles');
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [reviewData, setReviewData] = useState<ReviewModalData>({
@@ -252,7 +252,7 @@ export default function CompanyProfileScreen() {
 
   const handleSubmitReview = async () => {
     if (!user || !company) {
-      Alert.alert('Sign In Required', 'Please sign in to submit a review.');
+      Alert.alert('Sign In Required', 'Please sign in to submit a Qdle.');
       return;
     }
 
@@ -272,11 +272,11 @@ export default function CompanyProfileScreen() {
       
       setShowReviewModal(false);
       setReviewData({ title: '', content: '', rating: 5 });
-      Alert.alert('Success', 'Your review has been submitted successfully!');
+      Alert.alert('Success', 'Your Qdle has been submitted successfully!');
       loadCompanyData();
     } catch (error) {
-      console.error('Error submitting review:', error);
-      Alert.alert('Error', 'Failed to submit review. Please try again.');
+      console.error('Error submitting Qdle:', error);
+      Alert.alert('Error', 'Failed to submit Qdle. Please try again.');
     }
   };
 
@@ -418,7 +418,7 @@ export default function CompanyProfileScreen() {
               
               {/* Removed rating stars section */}
               <Text style={styles.ratingText}>
-                {company.total_reviews || 0} reviews
+                {company.total_reviews || 0} Qdles
               </Text>
             </View>
           </View>
@@ -470,7 +470,7 @@ export default function CompanyProfileScreen() {
               onPress={() => setShowReviewModal(true)}
             >
               <Star size={20} color="#FFFFFF" />
-              <Text style={styles.actionButtonText}>Write Review</Text>
+              <Text style={styles.actionButtonText}>Write Qdle</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
@@ -485,11 +485,11 @@ export default function CompanyProfileScreen() {
           {/* Tabs */}
           <View style={styles.tabsContainer}>
             <TouchableOpacity 
-              style={[styles.tab, activeTab === 'reviews' && styles.activeTab]}
-              onPress={() => setActiveTab('reviews')}
+              style={[styles.tab, activeTab === 'qdles' && styles.activeTab]}
+              onPress={() => setActiveTab('qdles')}
             >
-              <Text style={[styles.tabText, activeTab === 'reviews' && styles.activeTabText]}>
-                Reviews ({company.reviews?.length || 0})
+              <Text style={[styles.tabText, activeTab === 'qdles' && styles.activeTabText]}>
+                Qdles ({company.reviews?.length || 0})
               </Text>
             </TouchableOpacity>
             
@@ -505,7 +505,7 @@ export default function CompanyProfileScreen() {
 
           {/* Tab Content */}
           <View style={styles.tabContent}>
-            {activeTab === 'reviews' && (
+            {activeTab === 'qdles' && (
               <View style={styles.reviewsContent}>
                 {company.reviews && company.reviews.length > 0 ? (
                   company.reviews.map((review) => (
@@ -514,7 +514,7 @@ export default function CompanyProfileScreen() {
                 ) : (
                   <View style={styles.emptyState}>
                     <Star size={48} color="#666666" />
-                    <Text style={styles.emptyTitle}>No Reviews Yet</Text>
+                    <Text style={styles.emptyTitle}>No Qdles Yet</Text>
                     <Text style={styles.emptyMessage}>
                       Be the first to share your experience with {company.name}
                     </Text>
@@ -522,7 +522,7 @@ export default function CompanyProfileScreen() {
                       style={styles.emptyActionButton}
                       onPress={() => setShowReviewModal(true)}
                     >
-                      <Text style={styles.emptyActionText}>Write First Review</Text>
+                      <Text style={styles.emptyActionText}>Write First Qdle</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -567,7 +567,7 @@ export default function CompanyProfileScreen() {
               <TouchableOpacity onPress={() => setShowReviewModal(false)}>
                 <X size={24} color="#666666" />
               </TouchableOpacity>
-              <Text style={styles.modalTitle}>Write Review</Text>
+              <Text style={styles.modalTitle}>Write Qdle</Text>
               <TouchableOpacity onPress={handleSubmitReview}>
                 <Send size={24} color="#5ce1e6" />
               </TouchableOpacity>
@@ -593,7 +593,7 @@ export default function CompanyProfileScreen() {
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Review Title</Text>
+                <Text style={styles.label}>Qdle Title</Text>
                 <TextInput
                   style={styles.input}
                   value={reviewData.title}
@@ -604,7 +604,7 @@ export default function CompanyProfileScreen() {
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Review Content</Text>
+                <Text style={styles.label}>Qdle Content</Text>
                 <TextInput
                   style={styles.textArea}
                   value={reviewData.content}
