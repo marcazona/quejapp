@@ -9,7 +9,7 @@ import {
   Animated,
   Platform,
 } from 'react-native';
-import { ThumbsUp, ThumbsDown, TrendingUp, TrendingDown, Minus, X } from 'lucide-react-native';
+import { ThumbsUp, ThumbsDown, TrendingUp, TrendingDown, Minus, X, BarChart3 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -260,11 +260,11 @@ export const LiveMoodWidget: React.FC<LiveMoodWidgetProps> = ({
   const getTrendIcon = () => {
     switch (moodData.trend) {
       case 'up':
-        return <TrendingUp size={12} color="#27AE60" />;
+        return <TrendingUp size={14} color="#27AE60" />;
       case 'down':
-        return <TrendingDown size={12} color="#E74C3C" />;
+        return <TrendingDown size={14} color="#E74C3C" />;
       default:
-        return <Minus size={12} color="#666666" />;
+        return <Minus size={14} color="#666666" />;
     }
   };
 
@@ -279,15 +279,18 @@ export const LiveMoodWidget: React.FC<LiveMoodWidgetProps> = ({
     }
   };
 
-  const getTrendText = () => {
-    switch (moodData.trend) {
-      case 'up':
-        return 'Improving';
-      case 'down':
-        return 'Declining';
-      default:
-        return 'Stable';
-    }
+  const getRecommendationText = () => {
+    if (moodData.totalVotes < 5) return 'New';
+    if (moodData.positivePercentage >= 70) return 'Recommended';
+    if (moodData.positivePercentage >= 50) return 'Mixed Reviews';
+    return 'Caution';
+  };
+
+  const getRecommendationColor = () => {
+    if (moodData.totalVotes < 5) return '#666666';
+    if (moodData.positivePercentage >= 70) return '#27AE60';
+    if (moodData.positivePercentage >= 50) return '#E67E22';
+    return '#E74C3C';
   };
 
   if (!showWidget) return null;
@@ -295,8 +298,10 @@ export const LiveMoodWidget: React.FC<LiveMoodWidgetProps> = ({
   if (isLoading) {
     return (
       <View style={[styles.container, compact && styles.containerCompact]}>
-        <ActivityIndicator size="small" color="#5ce1e6" />
-        <Text style={styles.loadingText}>Loading mood...</Text>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="small" color="#5ce1e6" />
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
       </View>
     );
   }
@@ -307,16 +312,23 @@ export const LiveMoodWidget: React.FC<LiveMoodWidgetProps> = ({
       compact && styles.containerCompact,
       { transform: [{ scale: pulseAnim }] }
     ]}>
-      {showTitle && (
-        <View style={styles.header}>
-          <View style={styles.titleRow}>
-            <Text style={styles.title}>LiveMood</Text>
-            <View style={styles.trendContainer}>
-              {getTrendIcon()}
-              <Text style={[styles.trendText, { color: getTrendColor() }]}>
-                {getTrendText()}
-              </Text>
-            </View>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <Text style={styles.title}>LiveMood</Text>
+          <View style={styles.recommendationBadge}>
+            <Text style={[styles.recommendationText, { color: getRecommendationColor() }]}>
+              {getRecommendationText()}
+            </Text>
+          </View>
+        </View>
+        
+        <View style={styles.headerRight}>
+          <View style={styles.trendContainer}>
+            {getTrendIcon()}
+            <Text style={[styles.trendText, { color: getTrendColor() }]}>
+              {moodData.trend === 'up' ? 'Rising' : moodData.trend === 'down' ? 'Falling' : 'Stable'}
+            </Text>
           </View>
           <TouchableOpacity 
             style={styles.closeButton}
@@ -325,47 +337,45 @@ export const LiveMoodWidget: React.FC<LiveMoodWidgetProps> = ({
             <X size={16} color="#666666" />
           </TouchableOpacity>
         </View>
-      )}
-
-      {/* Mood Bar */}
-      <View style={styles.moodBar}>
-        <View 
-          style={[
-            styles.moodBarFill, 
-            styles.moodBarPositive,
-            { width: `${moodData.positivePercentage}%` }
-          ]} 
-        />
-        <View 
-          style={[
-            styles.moodBarFill, 
-            styles.moodBarNegative,
-            { width: `${moodData.negativePercentage}%`, right: 0, position: 'absolute' }
-          ]} 
-        />
       </View>
 
-      {/* Stats */}
-      {!compact && (
-        <View style={styles.stats}>
+      {/* Mood Bar */}
+      <View style={styles.moodBarContainer}>
+        <View style={styles.moodBar}>
+          <View 
+            style={[
+              styles.moodBarFill, 
+              styles.moodBarPositive,
+              { width: `${moodData.positivePercentage}%` }
+            ]} 
+          />
+          <View 
+            style={[
+              styles.moodBarFill, 
+              styles.moodBarNegative,
+              { width: `${moodData.negativePercentage}%`, right: 0, position: 'absolute' }
+            ]} 
+          />
+        </View>
+        
+        {/* Stats Row */}
+        <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{moodData.positiveVotes}</Text>
-            <Text style={styles.statLabel}>Good</Text>
+            <ThumbsUp size={12} color="#27AE60" />
+            <Text style={styles.statText}>{moodData.positiveVotes} ({Math.round(moodData.positivePercentage)}%)</Text>
           </View>
+          <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{moodData.totalVotes}</Text>
-            <Text style={styles.statLabel}>Total</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{moodData.negativeVotes}</Text>
-            <Text style={styles.statLabel}>Bad</Text>
+            <ThumbsDown size={12} color="#E74C3C" />
+            <Text style={styles.statText}>{moodData.negativeVotes} ({Math.round(moodData.negativePercentage)}%)</Text>
           </View>
         </View>
-      )}
+      </View>
 
-      {/* Voting Buttons */}
-      <View style={styles.votingContainer}>
-        <Text style={styles.votingTitle}>How was your experience?</Text>
+      {/* Voting Section */}
+      <View style={styles.votingSection}>
+        <Text style={styles.votingQuestion}>How was your experience with {companyName}?</Text>
+        
         <View style={styles.votingButtons}>
           <TouchableOpacity
             style={[
@@ -415,17 +425,17 @@ export const LiveMoodWidget: React.FC<LiveMoodWidgetProps> = ({
         </View>
       </View>
 
-      {/* User Vote Status */}
-      {moodData.userVote && (
-        <Text style={styles.voteStatus}>
-          You voted: {moodData.userVote === 'positive' ? 'Good' : 'Bad'} • Tap to change
+      {/* Footer */}
+      <View style={styles.footer}>
+        {moodData.userVote && (
+          <Text style={styles.userVoteStatus}>
+            You voted: {moodData.userVote === 'positive' ? 'Good' : 'Bad'} • Tap to change
+          </Text>
+        )}
+        <Text style={styles.voteCount}>
+          Based on {moodData.totalVotes} {moodData.totalVotes === 1 ? 'vote' : 'votes'} • Updated just now
         </Text>
-      )}
-
-      {/* Vote Count */}
-      <Text style={styles.voteCount}>
-        {moodData.totalVotes} {moodData.totalVotes === 1 ? 'person has' : 'people have'} shared their experience
-      </Text>
+      </View>
     </Animated.View>
   );
 };
@@ -433,7 +443,7 @@ export const LiveMoodWidget: React.FC<LiveMoodWidgetProps> = ({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#1A1A1A',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
     marginVertical: 8,
     borderWidth: 1,
@@ -443,22 +453,47 @@ const styles = StyleSheet.create({
     padding: 12,
     marginVertical: 4,
   },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#666666',
+    marginLeft: 8,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
-  titleRow: {
+  headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    flex: 1,
+    gap: 12,
   },
   title: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  recommendationBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    backgroundColor: '#2A2A2A',
+  },
+  recommendationText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   trendContainer: {
     flexDirection: 'row',
@@ -472,13 +507,16 @@ const styles = StyleSheet.create({
   closeButton: {
     padding: 4,
   },
+  moodBarContainer: {
+    marginBottom: 16,
+  },
   moodBar: {
-    height: 6,
+    height: 8,
     backgroundColor: '#2A2A2A',
-    borderRadius: 3,
+    borderRadius: 4,
     overflow: 'hidden',
-    marginBottom: 12,
     position: 'relative',
+    marginBottom: 8,
   },
   moodBarFill: {
     height: '100%',
@@ -492,28 +530,32 @@ const styles = StyleSheet.create({
   moodBarNegative: {
     backgroundColor: '#E74C3C',
   },
-  stats: {
+  statsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 16,
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   statItem: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+    flex: 1,
   },
-  statValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
+  statDivider: {
+    width: 1,
+    height: 16,
+    backgroundColor: '#2A2A2A',
+    marginHorizontal: 12,
   },
-  statLabel: {
+  statText: {
     fontSize: 12,
-    color: '#666666',
-    marginTop: 2,
+    color: '#CCCCCC',
+    fontWeight: '500',
   },
-  votingContainer: {
-    marginBottom: 12,
+  votingSection: {
+    marginBottom: 16,
   },
-  votingTitle: {
+  votingQuestion: {
     fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
@@ -530,21 +572,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    backgroundColor: 'transparent',
   },
   voteButtonPositive: {
     borderColor: '#27AE60',
-    backgroundColor: 'transparent',
   },
   voteButtonNegative: {
     borderColor: '#E74C3C',
-    backgroundColor: 'transparent',
   },
   voteButtonActive: {
     backgroundColor: '#27AE60',
+    borderColor: '#27AE60',
   },
   voteButtonDisabled: {
     opacity: 0.5,
@@ -557,20 +599,18 @@ const styles = StyleSheet.create({
   voteButtonTextActive: {
     color: '#FFFFFF',
   },
-  voteStatus: {
+  footer: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  userVoteStatus: {
     fontSize: 12,
     color: '#5ce1e6',
-    textAlign: 'center',
-    marginBottom: 8,
+    fontWeight: '500',
   },
   voteCount: {
     fontSize: 11,
     color: '#666666',
     textAlign: 'center',
-  },
-  loadingText: {
-    fontSize: 14,
-    color: '#666666',
-    marginLeft: 8,
   },
 });
