@@ -27,7 +27,6 @@ interface Company {
   name: string;
   description: string;
   logo_url: string | null;
-  cover_image_url: string | null;
   industry: string;
   website: string | null;
   phone: string | null;
@@ -216,7 +215,6 @@ const CompanyModal = ({
     city: '',
     country: '',
     logo_url: '',
-    cover_image_url: '',
     verified: false,
     is_active: true,
   });
@@ -236,7 +234,6 @@ const CompanyModal = ({
         city: company.city || '',
         country: company.country || '',
         logo_url: company.logo_url || '',
-        cover_image_url: company.cover_image_url || '',
         verified: company.verified,
         is_active: company.is_active,
       });
@@ -252,7 +249,6 @@ const CompanyModal = ({
         city: '',
         country: '',
         logo_url: '',
-        cover_image_url: '',
         verified: false,
         is_active: true,
       });
@@ -475,19 +471,6 @@ const CompanyModal = ({
             />
           </View>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Cover Image URL</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.cover_image_url}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, cover_image_url: text }))}
-              placeholder="https://example.com/cover.png"
-              placeholderTextColor="#666666"
-              keyboardType="url"
-              editable={!saving}
-            />
-          </View>
-
           <View style={styles.switchGroup}>
             <View style={styles.switchItem}>
               <Text style={styles.switchLabel}>Verified Company</Text>
@@ -574,7 +557,6 @@ const CompaniesContent = () => {
           city: companyData.city || null,
           country: companyData.country || null,
           logo_url: companyData.logo_url || null,
-          cover_image_url: companyData.cover_image_url || null,
           verified: companyData.verified || false,
           is_active: companyData.is_active !== undefined ? companyData.is_active : true,
           rating: null,
@@ -619,7 +601,6 @@ const CompaniesContent = () => {
           city: companyData.city || null,
           country: companyData.country || null,
           logo_url: companyData.logo_url || null,
-          cover_image_url: companyData.cover_image_url || null,
           verified: companyData.verified,
           is_active: companyData.is_active,
         })

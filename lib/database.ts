@@ -36,7 +36,6 @@ export interface Company {
   name: string;
   description: string;
   logo_url: string | null;
-  cover_image_url: string | null;
   industry: string;
   website: string | null;
   phone: string | null;
@@ -787,7 +786,6 @@ export const createSampleCompanies = async (): Promise<void> => {
         name: 'TechCorp Solutions',
         description: 'Leading technology solutions provider specializing in cloud computing and digital transformation.',
         logo_url: 'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=200&h=200',
-        cover_image_url: 'https://images.pexels.com/photos/3184292/pexels-photo-3184292.jpeg?auto=compress&cs=tinysrgb&w=400&h=300',
         industry: 'Technology',
         website: 'https://techcorp.com',
         phone: '+1-555-0123',
@@ -805,7 +803,6 @@ export const createSampleCompanies = async (): Promise<void> => {
         name: 'GreenEarth Foods',
         description: 'Organic and sustainable food products for a healthier planet and lifestyle.',
         logo_url: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=200&h=200',
-        cover_image_url: 'https://images.pexels.com/photos/1640774/pexels-photo-1640774.jpeg?auto=compress&cs=tinysrgb&w=400&h=300',
         industry: 'Food & Beverage',
         website: 'https://greenearthfoods.com',
         phone: '+1-555-0456',
@@ -823,7 +820,6 @@ export const createSampleCompanies = async (): Promise<void> => {
         name: 'Urban Fashion Co.',
         description: 'Trendy and affordable fashion for the modern urban lifestyle.',
         logo_url: 'https://images.pexels.com/photos/1040945/pexels-photo-1040945.jpeg?auto=compress&cs=tinysrgb&w=200&h=200',
-        cover_image_url: 'https://images.pexels.com/photos/1040946/pexels-photo-1040946.jpeg?auto=compress&cs=tinysrgb&w=400&h=300',
         industry: 'Fashion & Retail',
         website: 'https://urbanfashion.com',
         phone: '+1-555-0789',
@@ -841,7 +837,6 @@ export const createSampleCompanies = async (): Promise<void> => {
         name: 'HealthFirst Clinic',
         description: 'Comprehensive healthcare services with a focus on preventive medicine.',
         logo_url: 'https://images.pexels.com/photos/263402/pexels-photo-263402.jpeg?auto=compress&cs=tinysrgb&w=200&h=200',
-        cover_image_url: 'https://images.pexels.com/photos/263401/pexels-photo-263401.jpeg?auto=compress&cs=tinysrgb&w=400&h=300',
         industry: 'Healthcare',
         website: 'https://healthfirst.com',
         phone: '+1-555-0321',
@@ -859,7 +854,6 @@ export const createSampleCompanies = async (): Promise<void> => {
         name: 'EcoClean Services',
         description: 'Environmentally friendly cleaning services for homes and businesses.',
         logo_url: 'https://images.pexels.com/photos/4239091/pexels-photo-4239091.jpeg?auto=compress&cs=tinysrgb&w=200&h=200',
-        cover_image_url: 'https://images.pexels.com/photos/4239092/pexels-photo-4239092.jpeg?auto=compress&cs=tinysrgb&w=400&h=300',
         industry: 'Services',
         website: 'https://ecoclean.com',
         phone: '+1-555-0654',
@@ -877,7 +871,6 @@ export const createSampleCompanies = async (): Promise<void> => {
         name: 'AutoFix Garage',
         description: 'Professional automotive repair and maintenance services you can trust.',
         logo_url: 'https://images.pexels.com/photos/3806288/pexels-photo-3806288.jpeg?auto=compress&cs=tinysrgb&w=200&h=200',
-        cover_image_url: 'https://images.pexels.com/photos/3806289/pexels-photo-3806289.jpeg?auto=compress&cs=tinysrgb&w=400&h=300',
         industry: 'Automotive',
         website: 'https://autofix.com',
         phone: '+1-555-0987',
