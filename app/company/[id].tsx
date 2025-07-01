@@ -312,23 +312,6 @@ export default function CompanyProfileScreen() {
     }
   };
 
-  const renderStars = (rating: number | null) => {
-    const stars = [];
-    const actualRating = rating || 0;
-    
-    for (let i = 1; i <= 5; i++) {
-      stars.push(
-        <Star
-          key={i}
-          size={16}
-          color={i <= actualRating ? '#FFD700' : '#666666'}
-          fill={i <= actualRating ? '#FFD700' : 'transparent'}
-        />
-      );
-    }
-    return stars;
-  };
-
   if (loading) {
     return (
       <View style={styles.container}>
@@ -434,15 +417,10 @@ export default function CompanyProfileScreen() {
               <Text style={styles.companyName}>{company.name}</Text>
               <Text style={styles.companyIndustry}>{company.industry}</Text>
               
-              <View style={styles.ratingContainer}>
-                <View style={styles.starsContainer}>
-                  {renderStars(company.rating)}
-                </View>
-                <Text style={styles.ratingText}>
-                  {company.rating ? company.rating.toFixed(1) : 'No rating'} 
-                  ({company.total_reviews || 0} reviews)
-                </Text>
-              </View>
+              {/* Removed rating stars section */}
+              <Text style={styles.ratingText}>
+                {company.total_reviews || 0} reviews
+              </Text>
             </View>
           </View>
 
