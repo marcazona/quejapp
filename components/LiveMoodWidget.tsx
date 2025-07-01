@@ -9,7 +9,7 @@ import {
   Animated,
   Platform,
 } from 'react-native';
-import { ThumbsUp, ThumbsDown, TrendingUp, TrendingDown, Minus, X, BarChart3 } from 'lucide-react-native';
+import { ThumbsUp, ThumbsDown, TrendingUp, TrendingDown, Minus, X, ChartBar as BarChart3 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
