@@ -27,16 +27,21 @@ interface Company {
   name: string;
   description: string;
   logo_url: string | null;
+  cover_image_url: string | null;
   industry: string;
   website: string | null;
   phone: string | null;
   email: string | null;
+  address: string | null;
+  city: string | null;
+  country: string | null;
+  rating: number | null;
+  total_reviews: number;
+  total_claims: number;
   verified: boolean;
   is_active: boolean;
   created_at: string;
-  total_reviews: number;
-  total_claims: number;
-  rating: number | null;
+  updated_at: string;
 }
 
 const CompanyCard = ({ 
@@ -207,7 +212,11 @@ const CompanyModal = ({
     website: '',
     phone: '',
     email: '',
+    address: '',
+    city: '',
+    country: '',
     logo_url: '',
+    cover_image_url: '',
     verified: false,
     is_active: true,
   });
@@ -223,7 +232,11 @@ const CompanyModal = ({
         website: company.website || '',
         phone: company.phone || '',
         email: company.email || '',
+        address: company.address || '',
+        city: company.city || '',
+        country: company.country || '',
         logo_url: company.logo_url || '',
+        cover_image_url: company.cover_image_url || '',
         verified: company.verified,
         is_active: company.is_active,
       });
@@ -235,7 +248,11 @@ const CompanyModal = ({
         website: '',
         phone: '',
         email: '',
+        address: '',
+        city: '',
+        country: '',
         logo_url: '',
+        cover_image_url: '',
         verified: false,
         is_active: true,
       });
@@ -409,12 +426,62 @@ const CompanyModal = ({
           </View>
 
           <View style={styles.formGroup}>
+            <Text style={styles.label}>Address</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.address}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, address: text }))}
+              placeholder="123 Main Street"
+              placeholderTextColor="#666666"
+              editable={!saving}
+            />
+          </View>
+
+          <View style={styles.formRow}>
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>City</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.city}
+                onChangeText={(text) => setFormData(prev => ({ ...prev, city: text }))}
+                placeholder="New York"
+                placeholderTextColor="#666666"
+                editable={!saving}
+              />
+            </View>
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Country</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.country}
+                onChangeText={(text) => setFormData(prev => ({ ...prev, country: text }))}
+                placeholder="USA"
+                placeholderTextColor="#666666"
+                editable={!saving}
+              />
+            </View>
+          </View>
+
+          <View style={styles.formGroup}>
             <Text style={styles.label}>Logo URL</Text>
             <TextInput
               style={styles.input}
               value={formData.logo_url}
               onChangeText={(text) => setFormData(prev => ({ ...prev, logo_url: text }))}
               placeholder="https://example.com/logo.png"
+              placeholderTextColor="#666666"
+              keyboardType="url"
+              editable={!saving}
+            />
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Cover Image URL</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.cover_image_url}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, cover_image_url: text }))}
+              placeholder="https://example.com/cover.png"
               placeholderTextColor="#666666"
               keyboardType="url"
               editable={!saving}
@@ -503,7 +570,11 @@ const CompaniesContent = () => {
           website: companyData.website || null,
           phone: companyData.phone || null,
           email: companyData.email || null,
+          address: companyData.address || null,
+          city: companyData.city || null,
+          country: companyData.country || null,
           logo_url: companyData.logo_url || null,
+          cover_image_url: companyData.cover_image_url || null,
           verified: companyData.verified || false,
           is_active: companyData.is_active !== undefined ? companyData.is_active : true,
           rating: null,
@@ -544,7 +615,11 @@ const CompaniesContent = () => {
           website: companyData.website || null,
           phone: companyData.phone || null,
           email: companyData.email || null,
+          address: companyData.address || null,
+          city: companyData.city || null,
+          country: companyData.country || null,
           logo_url: companyData.logo_url || null,
+          cover_image_url: companyData.cover_image_url || null,
           verified: companyData.verified,
           is_active: companyData.is_active,
         })
@@ -1091,6 +1166,10 @@ const styles = StyleSheet.create({
   },
   formGroup: {
     marginBottom: 20,
+  },
+  formRow: {
+    flexDirection: 'row',
+    gap: 16,
   },
   label: {
     fontSize: 14,
