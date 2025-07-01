@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,73 +10,1108 @@ import {
   StatusBar,
   Platform,
   Dimensions,
-  TextInput,
+  ActivityIndicator,
   Modal,
   Alert,
-  ActivityIndicator,
-  RefreshControl,
+  Animated,
+  TextInput,
+  KeyboardAvoidingView,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, router } from 'expo-router';
-import { ArrowLeft, Star, MapPin, Phone, Mail, Globe, MessageCircle, Shield, Clock, User, Send, X, Plus, Flag, Heart, Share, Building2, Users, TrendingUp, Award, CircleCheck as CheckCircle, TriangleAlert as AlertTriangle, Calendar, FileText, Camera, CreditCard as Edit3 } from 'lucide-react-native';
+import { ArrowLeft, Star, Shield, MessageCircle, Phone, Mail, Globe, MapPin, Building2, User, Plus, X, TriangleAlert as AlertTriangle, ThumbsUp, ThumbsDown, TrendingUp, TrendingDown, Heart, Send, MoveHorizontal as MoreHorizontal } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import {
-  getCompanyById,
-  createCompanyReview,
-  createCompanyClaim,
-  startLiveChatWithCompany,
-  type FullCompanyProfile,
-  type CompanyReview,
-  type CompanyClaim,
-} from '@/lib/database';
+import { getCompanyById, startLiveChatWithCompany, type FullCompanyProfile, type CompanyReview, type CompanyClaim } from '@/lib/database';
 
 const { width } = Dimensions.get('window');
 
-interface NewReview {
-  title: string;
+interface LiveMoodData {
+  totalVotes: number;
+  positiveVotes: number;
+  negativeVotes: number;
+  userVote: 'positive' | 'negative' | null;
+  trend: 'up' | 'down' | 'stable';
+  lastUpdated: string;
+}
+
+interface ReactionData {
+  count: number;
+  userReacted: boolean;
+}
+
+interface Comment {
+  id: string;
+  postId: string;
+  postType: 'review' | 'claim';
+  userId: string;
   content: string;
-  rating: number;
+  parentId?: string;
+  reactions: ReactionData;
+  createdAt: string;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    avatarUrl?: string;
+    verified: boolean;
+  };
+  replies?: Comment[];
 }
 
-interface NewClaim {
-  title: string;
-  description: string;
-  category: string;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-}
+const LiveMoodSection = ({ companyId, companyName }: { companyId: string; companyName: string }) => {
+  const { user } = useAuth();
+  const [moodData, setMoodData] = useState<LiveMoodData>({
+    totalVotes: 247,
+    positiveVotes: 156,
+    negativeVotes: 91,
+    userVote: null,
+    trend: 'up',
+    lastUpdated: new Date().toISOString(),
+  });
+  const [isVoting, setIsVoting] = useState(false);
 
-const StarRating = ({ rating, size = 16, onRatingChange }: { 
-  rating: number; 
-  size?: number; 
-  onRatingChange?: (rating: number) => void;
-}) => {
-  const stars = [];
-  const isInteractive = !!onRatingChange;
-  
-  for (let i = 1; i <= 5; i++) {
-    const isFilled = i <= rating;
-    const StarComponent = isInteractive ? TouchableOpacity : View;
+  // Load user's existing vote when component mounts
+  useEffect(() => {
+    loadUserVote();
+  }, [companyId, user]);
+
+  const loadUserVote = async () => {
+    if (!user) return;
     
-    stars.push(
-      <StarComponent
-        key={i}
-        onPress={isInteractive ? () => onRatingChange(i) : undefined}
-        style={isInteractive ? styles.interactiveStar : undefined}
+    try {
+      // Check localStorage for user's vote on this company
+      const storageKey = `livemood_vote_${companyId}_${user.id}`;
+      let existingVote: string | null = null;
+      
+      if (Platform.OS === 'web') {
+        existingVote = localStorage.getItem(storageKey);
+      } else {
+        existingVote = await AsyncStorage.getItem(storageKey);
+      }
+      
+      if (existingVote) {
+        const voteData = JSON.parse(existingVote);
+        setMoodData(prev => ({
+          ...prev,
+          userVote: voteData.vote,
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading user vote:', error);
+    }
+  };
+
+  const saveUserVote = async (vote: 'positive' | 'negative' | null) => {
+    if (!user) return;
+    
+    try {
+      const storageKey = `livemood_vote_${companyId}_${user.id}`;
+      
+      if (vote === null) {
+        if (Platform.OS === 'web') {
+          localStorage.removeItem(storageKey);
+        } else {
+          await AsyncStorage.removeItem(storageKey);
+        }
+      } else {
+        const voteData = {
+          vote,
+          timestamp: new Date().toISOString(),
+          companyId,
+          userId: user.id,
+        };
+        if (Platform.OS === 'web') {
+          localStorage.setItem(storageKey, JSON.stringify(voteData));
+        } else {
+          await AsyncStorage.setItem(storageKey, JSON.stringify(voteData));
+        }
+      }
+    } catch (error) {
+      console.error('Error saving user vote:', error);
+    }
+  };
+  const positivePercentage = moodData.totalVotes > 0 ? (moodData.positiveVotes / moodData.totalVotes) * 100 : 0;
+  const negativePercentage = moodData.totalVotes > 0 ? (moodData.negativeVotes / moodData.totalVotes) * 100 : 0;
+
+  const handleVote = async (voteType: 'positive' | 'negative') => {
+    if (!user) {
+      Alert.alert('Sign In Required', 'Please sign in to vote on company mood.');
+      return;
+    }
+
+    if (isVoting) return;
+
+    setIsVoting(true);
+
+    try {
+      const previousVote = moodData.userVote;
+      const newVote = previousVote === voteType ? null : voteType;
+
+      setMoodData(prev => {
+        let newPositiveVotes = prev.positiveVotes;
+        let newNegativeVotes = prev.negativeVotes;
+        let newTotalVotes = prev.totalVotes;
+
+        // Remove previous vote if exists
+        if (prev.userVote === 'positive') {
+          newPositiveVotes--;
+          newTotalVotes--;
+        } else if (prev.userVote === 'negative') {
+          newNegativeVotes--;
+          newTotalVotes--;
+        }
+
+        // Add new vote if it's different from previous
+        if (newVote !== null) {
+          if (newVote === 'positive') {
+            newPositiveVotes++;
+          } else {
+            newNegativeVotes++;
+          }
+          newTotalVotes++;
+        }
+
+        // Calculate trend
+        const newPositivePercentage = newTotalVotes > 0 ? (newPositiveVotes / newTotalVotes) * 100 : 0;
+        const oldPositivePercentage = prev.totalVotes > 0 ? (prev.positiveVotes / prev.totalVotes) * 100 : 0;
+        
+        let newTrend: 'up' | 'down' | 'stable' = 'stable';
+        if (newPositivePercentage > oldPositivePercentage + 2) {
+          newTrend = 'up';
+        } else if (newPositivePercentage < oldPositivePercentage - 2) {
+          newTrend = 'down';
+        }
+
+        return {
+          totalVotes: newTotalVotes,
+          positiveVotes: newPositiveVotes,
+          negativeVotes: newNegativeVotes,
+          userVote: newVote,
+          trend: newTrend,
+          lastUpdated: new Date().toISOString(),
+        };
+      });
+
+      // Save vote to localStorage for persistence
+      await saveUserVote(newVote);
+      
+      // Simulate API call to backend
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+    } catch (error) {
+      console.error('Failed to submit vote:', error);
+      Alert.alert('Error', 'Failed to submit vote. Please try again.');
+      
+      // Revert the vote on error
+      setMoodData(prev => ({
+        ...prev,
+        userVote: previousVote,
+      }));
+      await saveUserVote(previousVote);
+    } finally {
+      setIsVoting(false);
+    }
+  };
+
+  const getTrendIcon = () => {
+    switch (moodData.trend) {
+      case 'up':
+        return <TrendingUp size={16} color="#27AE60" />;
+      case 'down':
+        return <TrendingDown size={16} color="#E74C3C" />;
+      default:
+        return null;
+    }
+  };
+
+  const getTrendText = () => {
+    switch (moodData.trend) {
+      case 'up':
+        return 'Recommended';
+      case 'down':
+        return 'Not Recommended';
+      default:
+        return 'Regular';
+    }
+  };
+
+  const getTrendColor = () => {
+    switch (moodData.trend) {
+      case 'up':
+        return '#27AE60';
+      case 'down':
+        return '#E74C3C';
+      default:
+        return '#E67E22';
+    }
+  };
+
+  return (
+    <View style={styles.liveMoodSection}>
+      <View style={styles.liveMoodHeader}>
+        <Text style={styles.liveMoodTitle}>LiveMood</Text>
+        <View style={styles.liveMoodTrend}>
+          {getTrendIcon()}
+          <Text style={[styles.liveMoodTrendText, { color: getTrendColor() }]}>
+            {getTrendText()}
+          </Text>
+        </View>
+      </View>
+
+      {/* Mood Visualization */}
+      <View style={styles.moodVisualization}>
+        <View style={styles.moodBar}>
+          <View 
+            style={[
+              styles.moodBarFill, 
+              styles.moodBarPositive,
+              { width: `${positivePercentage}%` }
+            ]} 
+          />
+          <View 
+            style={[
+              styles.moodBarFill, 
+              styles.moodBarNegative,
+              { width: `${negativePercentage}%`, right: 0, position: 'absolute' }
+            ]} 
+          />
+        </View>
+
+        <View style={styles.moodStats}>
+          <View style={styles.moodStat}>
+            <ThumbsUp size={16} color="#27AE60" />
+            <Text style={styles.moodStatText}>
+              {moodData.positiveVotes} ({positivePercentage.toFixed(0)}%)
+            </Text>
+          </View>
+          <View style={styles.moodStat}>
+            <ThumbsDown size={16} color="#E74C3C" />
+            <Text style={styles.moodStatText}>
+              {moodData.negativeVotes} ({negativePercentage.toFixed(0)}%)
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Voting Buttons */}
+      <View style={styles.moodVoting}>
+        <Text style={styles.moodVotingTitle}>How's your last experience with {companyName}?</Text>
+        <View style={styles.moodVotingButtons}>
+          <TouchableOpacity
+            style={[
+              styles.moodVoteButton,
+              styles.moodVoteButtonPositive,
+              moodData.userVote === 'positive' && styles.moodVoteButtonActivePositive,
+              isVoting && styles.moodVoteButtonDisabled,
+            ]}
+            onPress={() => handleVote('positive')}
+            disabled={isVoting}
+          >
+            <ThumbsUp 
+              size={20} 
+              color={moodData.userVote === 'positive' ? '#FFFFFF' : '#27AE60'} 
+              fill={moodData.userVote === 'positive' ? '#FFFFFF' : 'transparent'}
+            />
+            <Text style={[
+              styles.moodVoteButtonText,
+              moodData.userVote === 'positive' && styles.moodVoteButtonTextActivePositive
+            ]}>
+              Good
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.moodVoteButton,
+              styles.moodVoteButtonNegative,
+              moodData.userVote === 'negative' && styles.moodVoteButtonActiveNegative,
+              isVoting && styles.moodVoteButtonDisabled,
+            ]}
+            onPress={() => handleVote('negative')}
+            disabled={isVoting}
+          >
+            <ThumbsDown 
+              size={20} 
+             color={moodData.userVote === 'negative' ? '#FFFFFF' : '#E74C3C'} 
+              fill={moodData.userVote === 'negative' ? '#FFFFFF' : 'transparent'}
+            />
+            <Text style={[
+              styles.moodVoteButtonText,
+              styles.moodVoteButtonNegativeText,
+              moodData.userVote === 'negative' && styles.moodVoteButtonTextActiveNegative
+            ]}>
+              Bad
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {moodData.userVote && (
+          <Text style={styles.moodVoteStatus}>
+            You voted: {moodData.userVote === 'positive' ? 'Good' : 'Bad'} • Tap again to remove vote
+          </Text>
+        )}
+      </View>
+
+      <Text style={styles.moodLastUpdated}>
+        Based on {moodData.totalVotes} votes • Updated just now
+      </Text>
+    </View>
+  );
+};
+
+const ToxicBlueHeartReaction = ({ 
+  postId, 
+  postType 
+}: { 
+  postId: string; 
+  postType: 'review' | 'claim';
+}) => {
+  const { user } = useAuth();
+  const [reactionData, setReactionData] = useState<ReactionData>({
+    count: Math.floor(Math.random() * 50) + 5, // Random initial count between 5-55
+    userReacted: false,
+  });
+  const [isAnimating, setIsAnimating] = useState(false);
+  const scaleAnim = new Animated.Value(1);
+  const heartAnim = new Animated.Value(1);
+
+  // Load user's existing reaction when component mounts
+  useEffect(() => {
+    loadUserReaction();
+  }, [postId, user]);
+
+  const loadUserReaction = async () => {
+    if (!user) return;
+    
+    try {
+      const storageKey = `toxic_heart_${postType}_${postId}_${user.id}`;
+      let existingReaction: string | null = null;
+      
+      if (Platform.OS === 'web') {
+        existingReaction = localStorage.getItem(storageKey);
+      } else {
+        existingReaction = await AsyncStorage.getItem(storageKey);
+      }
+      
+      if (existingReaction) {
+        const reactionInfo = JSON.parse(existingReaction);
+        setReactionData(prev => ({
+          ...prev,
+          userReacted: reactionInfo.reacted,
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading user reaction:', error);
+    }
+  };
+
+  const saveUserReaction = async (reacted: boolean) => {
+    if (!user) return;
+    
+    try {
+      const storageKey = `toxic_heart_${postType}_${postId}_${user.id}`;
+      
+      if (!reacted) {
+        if (Platform.OS === 'web') {
+          localStorage.removeItem(storageKey);
+        } else {
+          await AsyncStorage.removeItem(storageKey);
+        }
+      } else {
+        const reactionInfo = {
+          reacted,
+          timestamp: new Date().toISOString(),
+          postId,
+          postType,
+          userId: user.id,
+        };
+        if (Platform.OS === 'web') {
+          localStorage.setItem(storageKey, JSON.stringify(reactionInfo));
+        } else {
+          await AsyncStorage.setItem(storageKey, JSON.stringify(reactionInfo));
+        }
+      }
+    } catch (error) {
+      console.error('Error saving user reaction:', error);
+    }
+  };
+
+  const animateHeart = (liked: boolean) => {
+    if (liked) {
+      // Instagram-like heart animation when liking
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(heartAnim, {
+            toValue: 1.3,
+            duration: 150,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scaleAnim, {
+            toValue: 0.95,
+            duration: 150,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.parallel([
+          Animated.timing(heartAnim, {
+            toValue: 1,
+            duration: 150,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scaleAnim, {
+            toValue: 1,
+            duration: 150,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]).start();
+    } else {
+      // Subtle animation when unliking
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 0.9,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  };
+
+  const handleReaction = async () => {
+    if (!user) {
+      Alert.alert('Sign In Required', 'Please sign in to react to posts.');
+      return;
+    }
+
+    if (isAnimating) return;
+
+    setIsAnimating(true);
+
+    try {
+      const newReacted = !reactionData.userReacted;
+      const newCount = newReacted ? reactionData.count + 1 : reactionData.count - 1;
+
+      // Animate immediately for better UX
+      animateHeart(newReacted);
+
+      setReactionData({
+        count: newCount,
+        userReacted: newReacted,
+      });
+
+      await saveUserReaction(newReacted);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+    } catch (error) {
+      console.error('Failed to submit reaction:', error);
+      // Revert on error
+      setReactionData(prev => ({
+        count: prev.userReacted ? prev.count - 1 : prev.count + 1,
+        userReacted: !prev.userReacted,
+      }));
+    } finally {
+      setTimeout(() => setIsAnimating(false), 300);
+    }
+  };
+
+  return (
+    <View style={styles.instagramReactionContainer}>
+      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+        <TouchableOpacity 
+          style={styles.instagramHeartButton}
+          onPress={handleReaction}
+          disabled={isAnimating}
+          activeOpacity={0.7}
+        >
+          <Animated.View style={{ transform: [{ scale: heartAnim }] }}>
+            <Heart 
+              size={24} 
+              color={reactionData.userReacted ? '#00BFFF' : '#666666'} 
+              fill={reactionData.userReacted ? '#00BFFF' : 'transparent'}
+              strokeWidth={reactionData.userReacted ? 0 : 2}
+            />
+          </Animated.View>
+        </TouchableOpacity>
+      </Animated.View>
+      
+      <TouchableOpacity onPress={handleReaction} disabled={isAnimating}>
+        <Text style={[
+          styles.instagramHeartCount,
+          reactionData.userReacted && styles.instagramHeartCountActive
+        ]}>
+          {reactionData.count.toLocaleString()} likes
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+const CommentReaction = ({ commentId }: { commentId: string }) => {
+  const { user } = useAuth();
+  const [reactionData, setReactionData] = useState<ReactionData>({
+    count: Math.floor(Math.random() * 20) + 1,
+    userReacted: false,
+  });
+  const [isAnimating, setIsAnimating] = useState(false);
+  const scaleAnim = new Animated.Value(1);
+  const heartAnim = new Animated.Value(1);
+
+  useEffect(() => {
+    loadUserReaction();
+  }, [commentId, user]);
+
+  const loadUserReaction = async () => {
+    if (!user) return;
+    
+    try {
+      const storageKey = `comment_heart_${commentId}_${user.id}`;
+      let existingReaction: string | null = null;
+      
+      if (Platform.OS === 'web') {
+        existingReaction = localStorage.getItem(storageKey);
+      } else {
+        existingReaction = await AsyncStorage.getItem(storageKey);
+      }
+      
+      if (existingReaction) {
+        const reactionInfo = JSON.parse(existingReaction);
+        setReactionData(prev => ({
+          ...prev,
+          userReacted: reactionInfo.reacted,
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading comment reaction:', error);
+    }
+  };
+
+  const saveUserReaction = async (reacted: boolean) => {
+    if (!user) return;
+    
+    try {
+      const storageKey = `comment_heart_${commentId}_${user.id}`;
+      
+      if (!reacted) {
+        if (Platform.OS === 'web') {
+          localStorage.removeItem(storageKey);
+        } else {
+          await AsyncStorage.removeItem(storageKey);
+        }
+      } else {
+        const reactionInfo = {
+          reacted,
+          timestamp: new Date().toISOString(),
+          commentId,
+          userId: user.id,
+        };
+        if (Platform.OS === 'web') {
+          localStorage.setItem(storageKey, JSON.stringify(reactionInfo));
+        } else {
+          await AsyncStorage.setItem(storageKey, JSON.stringify(reactionInfo));
+        }
+      }
+    } catch (error) {
+      console.error('Error saving comment reaction:', error);
+    }
+  };
+
+  const animateHeart = (liked: boolean) => {
+    if (liked) {
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(heartAnim, {
+            toValue: 1.2,
+            duration: 120,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scaleAnim, {
+            toValue: 0.95,
+            duration: 120,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.parallel([
+          Animated.timing(heartAnim, {
+            toValue: 1,
+            duration: 120,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scaleAnim, {
+            toValue: 1,
+            duration: 120,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]).start();
+    } else {
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 0.9,
+          duration: 80,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 80,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  };
+
+  const handleReaction = async () => {
+    if (!user) return;
+    if (isAnimating) return;
+
+    setIsAnimating(true);
+
+    try {
+      const newReacted = !reactionData.userReacted;
+      const newCount = newReacted ? reactionData.count + 1 : reactionData.count - 1;
+
+      animateHeart(newReacted);
+
+      setReactionData({
+        count: newCount,
+        userReacted: newReacted,
+      });
+
+      await saveUserReaction(newReacted);
+      await new Promise(resolve => setTimeout(resolve, 150));
+      
+    } catch (error) {
+      console.error('Failed to submit comment reaction:', error);
+      setReactionData(prev => ({
+        count: prev.userReacted ? prev.count - 1 : prev.count + 1,
+        userReacted: !prev.userReacted,
+      }));
+    } finally {
+      setTimeout(() => setIsAnimating(false), 200);
+    }
+  };
+
+  return (
+    <Animated.View style={[styles.commentReactionContainer, { transform: [{ scale: scaleAnim }] }]}>
+      <TouchableOpacity 
+        style={styles.commentHeartButton}
+        onPress={handleReaction}
+        disabled={isAnimating}
+        activeOpacity={0.7}
       >
-        <Star 
-          size={size} 
-          color={isFilled ? "#F39C12" : "#666666"} 
-          fill={isFilled ? "#F39C12" : "transparent"}
-        />
-      </StarComponent>
-    );
-  }
-  
-  return <View style={styles.starContainer}>{stars}</View>;
+        <Animated.View style={{ transform: [{ scale: heartAnim }] }}>
+          <Heart 
+            size={16} 
+            color={reactionData.userReacted ? '#00BFFF' : '#666666'} 
+            fill={reactionData.userReacted ? '#00BFFF' : 'transparent'}
+            strokeWidth={reactionData.userReacted ? 0 : 1.5}
+          />
+        </Animated.View>
+      </TouchableOpacity>
+      
+      {reactionData.count > 0 && (
+        <Text style={[
+          styles.commentHeartCount,
+          reactionData.userReacted && styles.commentHeartCountActive
+        ]}>
+          {reactionData.count}
+        </Text>
+      )}
+    </Animated.View>
+  );
+};
+
+const CommentItem = ({ 
+  comment, 
+  onReply, 
+  isReply = false 
+}: { 
+  comment: Comment; 
+  onReply: (commentId: string, userName: string) => void;
+  isReply?: boolean;
+}) => {
+  const getTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffHours < 1) return 'now';
+    if (diffHours < 24) return `${diffHours}h`;
+    if (diffDays < 7) return `${diffDays}d`;
+    return date.toLocaleDateString();
+  };
+
+  return (
+    <View style={[styles.commentItem, isReply && styles.replyItem]}>
+      <View style={styles.commentHeader}>
+        <View style={styles.commentUserInfo}>
+          {comment.user.avatarUrl ? (
+            <Image source={{ uri: comment.user.avatarUrl }} style={styles.commentAvatar} />
+          ) : (
+            <View style={styles.commentAvatarPlaceholder}>
+              <User size={16} color="#666666" />
+            </View>
+          )}
+          
+          <View style={styles.commentUserDetails}>
+            <View style={styles.commentUserName}>
+              <Text style={styles.commentUserNameText}>
+                {comment.user.firstName} {comment.user.lastName}
+              </Text>
+              {comment.user.verified && (
+                <Shield size={10} color="#27AE60" />
+              )}
+              <Text style={styles.commentTime}>{getTimeAgo(comment.createdAt)}</Text>
+            </View>
+          </View>
+        </View>
+
+        <TouchableOpacity style={styles.commentOptionsButton}>
+          <MoreHorizontal size={16} color="#666666" />
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.commentContent}>{comment.content}</Text>
+
+      <View style={styles.commentActions}>
+        <CommentReaction commentId={comment.id} />
+        
+        <TouchableOpacity 
+          style={styles.commentReplyButton}
+          onPress={() => onReply(comment.id, comment.user.firstName)}
+        >
+          <Text style={styles.commentReplyText}>Reply</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Render replies */}
+      {comment.replies && comment.replies.length > 0 && (
+        <View style={styles.repliesContainer}>
+          {comment.replies.map((reply) => (
+            <CommentItem
+              key={reply.id}
+              comment={reply}
+              onReply={onReply}
+              isReply={true}
+            />
+          ))}
+        </View>
+      )}
+    </View>
+  );
+};
+
+const CommentsSection = ({ 
+  postId, 
+  postType 
+}: { 
+  postId: string; 
+  postType: 'review' | 'claim';
+}) => {
+  const { user } = useAuth();
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [showComments, setShowComments] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [replyingTo, setReplyingTo] = useState<{ commentId: string; userName: string } | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Generate mock comments
+  useEffect(() => {
+    const mockComments: Comment[] = [
+      {
+        id: `comment_${postId}_1`,
+        postId,
+        postType,
+        userId: 'user1',
+        content: 'This is really helpful! Thanks for sharing your experience.',
+        reactions: { count: 5, userReacted: false },
+        createdAt: new Date(Date.now() - 3600000).toISOString(),
+        user: {
+          id: 'user1',
+          firstName: 'Sarah',
+          lastName: 'Johnson',
+          avatarUrl: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=100&h=100',
+          verified: true,
+        },
+        replies: [
+          {
+            id: `reply_${postId}_1_1`,
+            postId,
+            postType,
+            userId: 'user2',
+            content: 'I agree! Had a similar experience.',
+            parentId: `comment_${postId}_1`,
+            reactions: { count: 2, userReacted: false },
+            createdAt: new Date(Date.now() - 1800000).toISOString(),
+            user: {
+              id: 'user2',
+              firstName: 'Mike',
+              lastName: 'Chen',
+              avatarUrl: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=100&h=100',
+              verified: false,
+            },
+          },
+        ],
+      },
+      {
+        id: `comment_${postId}_2`,
+        postId,
+        postType,
+        userId: 'user3',
+        content: 'Thanks for the detailed review. This helps a lot in making my decision.',
+        reactions: { count: 3, userReacted: false },
+        createdAt: new Date(Date.now() - 7200000).toISOString(),
+        user: {
+          id: 'user3',
+          firstName: 'Emma',
+          lastName: 'Davis',
+          avatarUrl: 'https://images.pexels.com/photos/1036622/pexels-photo-1036622.jpeg?auto=compress&cs=tinysrgb&w=100&h=100',
+          verified: true,
+        },
+      },
+    ];
+    setComments(mockComments);
+  }, [postId, postType]);
+
+  const handleSubmitComment = async () => {
+    if (!user || !newComment.trim() || isSubmitting) return;
+
+    setIsSubmitting(true);
+
+    try {
+      const comment: Comment = {
+        id: `comment_${Date.now()}`,
+        postId,
+        postType,
+        userId: user.id,
+        content: newComment.trim(),
+        parentId: replyingTo?.commentId,
+        reactions: { count: 0, userReacted: false },
+        createdAt: new Date().toISOString(),
+        user: {
+          id: user.id,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          avatarUrl: user.avatar_url || undefined,
+          verified: user.verified || false,
+        },
+      };
+
+      if (replyingTo) {
+        // Add as reply
+        setComments(prev => prev.map(c => {
+          if (c.id === replyingTo.commentId) {
+            return {
+              ...c,
+              replies: [...(c.replies || []), comment],
+            };
+          }
+          return c;
+        }));
+      } else {
+        // Add as new comment
+        setComments(prev => [comment, ...prev]);
+      }
+
+      setNewComment('');
+      setReplyingTo(null);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+    } catch (error) {
+      console.error('Failed to submit comment:', error);
+      Alert.alert('Error', 'Failed to post comment. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleReply = (commentId: string, userName: string) => {
+    setReplyingTo({ commentId, userName });
+    setNewComment(`@${userName} `);
+  };
+
+  const cancelReply = () => {
+    setReplyingTo(null);
+    setNewComment('');
+  };
+
+  const commentsCount = comments.reduce((total, comment) => {
+    return total + 1 + (comment.replies?.length || 0);
+  }, 0);
+
+  return (
+    <View style={styles.commentsSection}>
+      <TouchableOpacity 
+        style={styles.commentsToggle}
+        onPress={() => setShowComments(!showComments)}
+      >
+        <MessageCircle size={20} color="#666666" />
+        <Text style={styles.commentsToggleText}>
+          {commentsCount > 0 ? `View ${commentsCount} comments` : 'Add a comment'}
+        </Text>
+      </TouchableOpacity>
+
+      {showComments && (
+        <View style={styles.commentsContainer}>
+          {/* Comment Input */}
+          <View style={styles.commentInputContainer}>
+            {replyingTo && (
+              <View style={styles.replyingToContainer}>
+                <Text style={styles.replyingToText}>
+                  Replying to @{replyingTo.userName}
+                </Text>
+                <TouchableOpacity onPress={cancelReply}>
+                  <X size={16} color="#666666" />
+                </TouchableOpacity>
+              </View>
+            )}
+            
+            <View style={styles.commentInputRow}>
+              {user?.avatar_url ? (
+                <Image source={{ uri: user.avatar_url }} style={styles.commentInputAvatar} />
+              ) : (
+                <View style={styles.commentInputAvatarPlaceholder}>
+                  <User size={16} color="#666666" />
+                </View>
+              )}
+              
+              <TextInput
+                style={styles.commentInput}
+                placeholder={replyingTo ? `Reply to ${replyingTo.userName}...` : 'Add a comment...'}
+                placeholderTextColor="#666666"
+                value={newComment}
+                onChangeText={setNewComment}
+                multiline
+                maxLength={500}
+                editable={!isSubmitting}
+              />
+              
+              <TouchableOpacity 
+                style={[
+                  styles.commentSubmitButton,
+                  (!newComment.trim() || isSubmitting) && styles.commentSubmitButtonDisabled
+                ]}
+                onPress={handleSubmitComment}
+                disabled={!newComment.trim() || isSubmitting}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator size="small" color="#666666" />
+                ) : (
+                  <Send size={16} color={newComment.trim() ? '#00BFFF' : '#666666'} />
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Comments List */}
+          <View style={styles.commentsList}>
+            {comments.map((comment) => (
+              <CommentItem
+                key={comment.id}
+                comment={comment}
+                onReply={handleReply}
+              />
+            ))}
+            
+            {comments.length === 0 && (
+              <View style={styles.noCommentsContainer}>
+                <MessageCircle size={32} color="#3A3A3A" />
+                <Text style={styles.noCommentsText}>No comments yet</Text>
+                <Text style={styles.noCommentsSubtext}>Be the first to share your thoughts!</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      )}
+    </View>
+  );
+};
+
+interface ActionModalProps {
+  visible: boolean;
+  onClose: () => void;
+  companyName: string;
+  onStartChat: () => void;
+  onWriteReview: () => void;
+  onWriteClaim: () => void;
+}
+
+const ActionModal = ({ visible, onClose, companyName, onStartChat, onWriteReview, onWriteClaim }: ActionModalProps) => {
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+    >
+      <SafeAreaView style={styles.modalContainer}>
+        <View style={styles.modalHeader}>
+          <TouchableOpacity onPress={onClose} style={styles.modalCloseButton}>
+            <X size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          
+          <Text style={styles.modalTitle}>Interact with {companyName}</Text>
+          
+          <View style={styles.modalPlaceholder} />
+        </View>
+
+        <View style={styles.modalContent}>
+          <Text style={styles.modalSubtitle}>Choose how you'd like to interact:</Text>
+          
+          <View style={styles.actionOptions}>
+            <TouchableOpacity style={styles.actionOption} onPress={onStartChat}>
+              <View style={[styles.actionIcon, { backgroundColor: '#27AE60' }]}>
+                <MessageCircle size={24} color="#FFFFFF" />
+              </View>
+              <View style={styles.actionContent}>
+                <Text style={styles.actionTitle}>Start Live Chat</Text>
+                <Text style={styles.actionDescription}>
+                  Connect directly with customer service for immediate assistance
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.actionOption} onPress={onWriteReview}>
+              <View style={[styles.actionIcon, { backgroundColor: '#3498DB' }]}>
+                <Star size={24} color="#FFFFFF" />
+              </View>
+              <View style={styles.actionContent}>
+                <Text style={styles.actionTitle}>Write a Qdle</Text>
+                <Text style={styles.actionDescription}>
+                  Share your positive experience and help others make informed decisions
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.actionOption} onPress={onWriteClaim}>
+              <View style={[styles.actionIcon, { backgroundColor: '#E74C3C' }]}>
+                <AlertTriangle size={24} color="#FFFFFF" />
+              </View>
+              <View style={styles.actionContent}>
+                <Text style={styles.actionTitle}>Write a Public Claim</Text>
+                <Text style={styles.actionDescription}>
+                  Report an issue or concern that needs to be addressed publicly
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
+    </Modal>
+  );
 };
 
 const ReviewCard = ({ review }: { review: CompanyReview }) => {
-  const userProfile = review.user_profiles;
-  
   const getTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -89,6 +1124,8 @@ const ReviewCard = ({ review }: { review: CompanyReview }) => {
     if (diffDays < 7) return `${diffDays}d ago`;
     return date.toLocaleDateString();
   };
+
+  const userProfile = review.user_profiles;
 
   return (
     <View style={styles.reviewCard}>
@@ -101,66 +1138,36 @@ const ReviewCard = ({ review }: { review: CompanyReview }) => {
               <User size={20} color="#666666" />
             </View>
           )}
+          
           <View style={styles.reviewUserDetails}>
             <View style={styles.reviewUserName}>
               <Text style={styles.reviewUserNameText}>
                 {userProfile?.first_name} {userProfile?.last_name}
               </Text>
               {userProfile?.verified && (
-                <Shield size={14} color="#27AE60" />
+                <Shield size={12} color="#27AE60" />
               )}
             </View>
-            <Text style={styles.reviewTime}>{getTimeAgo(review.created_at || '')}</Text>
+            <Text style={styles.reviewTime}>{getTimeAgo(review.created_at!)}</Text>
           </View>
         </View>
-        <StarRating rating={review.rating} size={14} />
       </View>
-      
+
       <Text style={styles.reviewTitle}>{review.title}</Text>
       <Text style={styles.reviewContent}>{review.content}</Text>
-      
-      {review.is_verified_purchase && (
-        <View style={styles.verifiedPurchase}>
-          <CheckCircle size={12} color="#27AE60" />
-          <Text style={styles.verifiedPurchaseText}>Verified Purchase</Text>
-        </View>
-      )}
-      
-      <View style={styles.reviewActions}>
-        <TouchableOpacity style={styles.reviewAction}>
-          <Heart size={16} color="#666666" />
-          <Text style={styles.reviewActionText}>Helpful ({review.helpful_count || 0})</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.reviewAction}>
-          <Flag size={16} color="#666666" />
-          <Text style={styles.reviewActionText}>Report</Text>
-        </TouchableOpacity>
+
+      {/* Instagram-style Toxic Blue Heart Reaction */}
+      <View style={styles.postReactions}>
+        <ToxicBlueHeartReaction postId={review.id} postType="review" />
       </View>
+
+      {/* Comments Section */}
+      <CommentsSection postId={review.id} postType="review" />
     </View>
   );
 };
 
 const ClaimCard = ({ claim }: { claim: CompanyClaim }) => {
-  const userProfile = claim.user_profiles;
-  
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'resolved': return '#27AE60';
-      case 'in_progress': return '#F39C12';
-      case 'rejected': return '#E74C3C';
-      default: return '#666666';
-    }
-  };
-  
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'urgent': return '#E74C3C';
-      case 'high': return '#E67E22';
-      case 'medium': return '#F39C12';
-      default: return '#27AE60';
-    }
-  };
-
   const getTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -174,6 +1181,18 @@ const ClaimCard = ({ claim }: { claim: CompanyClaim }) => {
     return date.toLocaleDateString();
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'resolved': return '#27AE60';
+      case 'in_progress': return '#3498DB';
+      case 'pending': return '#F39C12';
+      case 'rejected': return '#E74C3C';
+      default: return '#666666';
+    }
+  };
+
+  const userProfile = claim.user_profiles;
+
   return (
     <View style={styles.claimCard}>
       <View style={styles.claimHeader}>
@@ -182,9 +1201,10 @@ const ClaimCard = ({ claim }: { claim: CompanyClaim }) => {
             <Image source={{ uri: userProfile.avatar_url }} style={styles.claimAvatar} />
           ) : (
             <View style={styles.claimAvatarPlaceholder}>
-              <User size={16} color="#666666" />
+              <User size={20} color="#666666" />
             </View>
           )}
+          
           <View style={styles.claimUserDetails}>
             <View style={styles.claimUserName}>
               <Text style={styles.claimUserNameText}>
@@ -194,755 +1214,292 @@ const ClaimCard = ({ claim }: { claim: CompanyClaim }) => {
                 <Shield size={12} color="#27AE60" />
               )}
             </View>
-            <Text style={styles.claimTime}>{getTimeAgo(claim.created_at || '')}</Text>
+            <Text style={styles.claimTime}>{getTimeAgo(claim.created_at!)}</Text>
           </View>
         </View>
-        
+
         <View style={styles.claimBadges}>
-          <View style={[styles.claimBadge, { backgroundColor: getPriorityColor(claim.priority) }]}>
-            <Text style={styles.claimBadgeText}>{claim.priority}</Text>
-          </View>
           <View style={[styles.claimBadge, { backgroundColor: getStatusColor(claim.status) }]}>
             <Text style={styles.claimBadgeText}>{claim.status.replace('_', ' ')}</Text>
           </View>
         </View>
       </View>
-      
+
       <Text style={styles.claimTitle}>{claim.title}</Text>
       <Text style={styles.claimDescription}>{claim.description}</Text>
-      <Text style={styles.claimCategory}>Category: {claim.category}</Text>
       
+      <View style={styles.claimFooter}>
+        <Text style={styles.claimCategory}>{claim.category}</Text>
+        {claim.coins_awarded && (
+          <Text style={styles.claimCoins}>+{claim.coins_awarded} coins</Text>
+        )}
+      </View>
+
       {claim.resolution_notes && (
-        <View style={styles.resolutionNotes}>
-          <Text style={styles.resolutionNotesTitle}>Resolution Notes:</Text>
-          <Text style={styles.resolutionNotesText}>{claim.resolution_notes}</Text>
+        <View style={styles.claimResolution}>
+          <Text style={styles.claimResolutionTitle}>Resolution:</Text>
+          <Text style={styles.claimResolutionText}>{claim.resolution_notes}</Text>
         </View>
       )}
+
+      {/* Instagram-style Toxic Blue Heart Reaction */}
+      <View style={styles.postReactions}>
+        <ToxicBlueHeartReaction postId={claim.id} postType="claim" />
+      </View>
+
+      {/* Comments Section */}
+      <CommentsSection postId={claim.id} postType="claim" />
     </View>
   );
 };
 
-const CreateReviewModal = ({ 
-  visible, 
-  onClose, 
-  onSubmit, 
-  isLoading 
-}: {
-  visible: boolean;
-  onClose: () => void;
-  onSubmit: (review: NewReview) => void;
-  isLoading: boolean;
-}) => {
-  const [review, setReview] = useState<NewReview>({
-    title: '',
-    content: '',
-    rating: 5,
-  });
-
-  const handleSubmit = () => {
-    if (!review.title.trim() || !review.content.trim()) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
-    onSubmit(review);
-  };
-
-  const handleClose = () => {
-    setReview({ title: '', content: '', rating: 5 });
-    onClose();
-  };
-
-  return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <SafeAreaView style={styles.modalContainer}>
-        <View style={styles.modalHeader}>
-          <TouchableOpacity onPress={handleClose} disabled={isLoading}>
-            <X size={24} color="#666666" />
-          </TouchableOpacity>
-          <Text style={styles.modalTitle}>Write a Review</Text>
-          <TouchableOpacity 
-            style={styles.submitButton}
-            onPress={handleSubmit}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator size="small" color="#5ce1e6" />
-            ) : (
-              <Text style={styles.submitButtonText}>Post</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView style={styles.modalContent}>
-          <View style={styles.ratingSection}>
-            <Text style={styles.sectionLabel}>Rating</Text>
-            <StarRating 
-              rating={review.rating} 
-              size={32} 
-              onRatingChange={(rating) => setReview(prev => ({ ...prev, rating }))}
-            />
-          </View>
-
-          <View style={styles.inputSection}>
-            <Text style={styles.sectionLabel}>Review Title</Text>
-            <TextInput
-              style={styles.titleInput}
-              value={review.title}
-              onChangeText={(text) => setReview(prev => ({ ...prev, title: text }))}
-              placeholder="Summarize your experience"
-              placeholderTextColor="#666666"
-              maxLength={100}
-              editable={!isLoading}
-            />
-          </View>
-
-          <View style={styles.inputSection}>
-            <Text style={styles.sectionLabel}>Your Review</Text>
-            <TextInput
-              style={styles.contentInput}
-              value={review.content}
-              onChangeText={(text) => setReview(prev => ({ ...prev, content: text }))}
-              placeholder="Share details about your experience..."
-              placeholderTextColor="#666666"
-              multiline
-              numberOfLines={6}
-              maxLength={1000}
-              textAlignVertical="top"
-              editable={!isLoading}
-            />
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    </Modal>
-  );
-};
-
-const CreateClaimModal = ({ 
-  visible, 
-  onClose, 
-  onSubmit, 
-  isLoading 
-}: {
-  visible: boolean;
-  onClose: () => void;
-  onSubmit: (claim: NewClaim) => void;
-  isLoading: boolean;
-}) => {
-  const [claim, setClaim] = useState<NewClaim>({
-    title: '',
-    description: '',
-    category: 'Customer Service',
-    priority: 'medium',
-  });
-
-  const categories = [
-    'Customer Service',
-    'Product Quality',
-    'Billing',
-    'Delivery',
-    'Technical Support',
-    'Refund Request',
-    'Other',
-  ];
-
-  const priorities = [
-    { value: 'low', label: 'Low', color: '#27AE60' },
-    { value: 'medium', label: 'Medium', color: '#F39C12' },
-    { value: 'high', label: 'High', color: '#E67E22' },
-    { value: 'urgent', label: 'Urgent', color: '#E74C3C' },
-  ];
-
-  const handleSubmit = () => {
-    if (!claim.title.trim() || !claim.description.trim()) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
-    onSubmit(claim);
-  };
-
-  const handleClose = () => {
-    setClaim({ title: '', description: '', category: 'Customer Service', priority: 'medium' });
-    onClose();
-  };
-
-  return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <SafeAreaView style={styles.modalContainer}>
-        <View style={styles.modalHeader}>
-          <TouchableOpacity onPress={handleClose} disabled={isLoading}>
-            <X size={24} color="#666666" />
-          </TouchableOpacity>
-          <Text style={styles.modalTitle}>Submit a Claim</Text>
-          <TouchableOpacity 
-            style={styles.submitButton}
-            onPress={handleSubmit}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator size="small" color="#5ce1e6" />
-            ) : (
-              <Text style={styles.submitButtonText}>Submit</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView style={styles.modalContent}>
-          <View style={styles.inputSection}>
-            <Text style={styles.sectionLabel}>Issue Title</Text>
-            <TextInput
-              style={styles.titleInput}
-              value={claim.title}
-              onChangeText={(text) => setClaim(prev => ({ ...prev, title: text }))}
-              placeholder="Brief description of the issue"
-              placeholderTextColor="#666666"
-              maxLength={100}
-              editable={!isLoading}
-            />
-          </View>
-
-          <View style={styles.inputSection}>
-            <Text style={styles.sectionLabel}>Category</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
-              {categories.map((category) => (
-                <TouchableOpacity
-                  key={category}
-                  style={[
-                    styles.categoryChip,
-                    claim.category === category && styles.selectedCategoryChip
-                  ]}
-                  onPress={() => setClaim(prev => ({ ...prev, category }))}
-                  disabled={isLoading}
-                >
-                  <Text style={[
-                    styles.categoryChipText,
-                    claim.category === category && styles.selectedCategoryChipText
-                  ]}>
-                    {category}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-
-          <View style={styles.inputSection}>
-            <Text style={styles.sectionLabel}>Priority</Text>
-            <View style={styles.priorityContainer}>
-              {priorities.map((priority) => (
-                <TouchableOpacity
-                  key={priority.value}
-                  style={[
-                    styles.priorityChip,
-                    claim.priority === priority.value && styles.selectedPriorityChip,
-                    { borderColor: priority.color }
-                  ]}
-                  onPress={() => setClaim(prev => ({ ...prev, priority: priority.value as any }))}
-                  disabled={isLoading}
-                >
-                  <Text style={[
-                    styles.priorityChipText,
-                    claim.priority === priority.value && { color: priority.color }
-                  ]}>
-                    {priority.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.inputSection}>
-            <Text style={styles.sectionLabel}>Description</Text>
-            <TextInput
-              style={styles.contentInput}
-              value={claim.description}
-              onChangeText={(text) => setClaim(prev => ({ ...prev, description: text }))}
-              placeholder="Provide detailed information about your issue..."
-              placeholderTextColor="#666666"
-              multiline
-              numberOfLines={8}
-              maxLength={2000}
-              textAlignVertical="top"
-              editable={!isLoading}
-            />
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    </Modal>
-  );
-};
-
 export default function CompanyDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id } = useLocalSearchParams();
   const { user } = useAuth();
   const [company, setCompany] = useState<FullCompanyProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'reviews' | 'claims'>('overview');
-  const [showReviewModal, setShowReviewModal] = useState(false);
-  const [showClaimModal, setShowClaimModal] = useState(false);
-  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-  const [isSubmittingClaim, setIsSubmittingClaim] = useState(false);
-  const [isStartingChat, setIsStartingChat] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'reviews' | 'claims'>('reviews');
+  const [showActionModal, setShowActionModal] = useState(false);
 
   useEffect(() => {
-    if (id) {
-      loadCompanyData();
-    }
+    loadCompany();
   }, [id]);
 
-  const loadCompanyData = async (showRefreshIndicator = false) => {
+  const loadCompany = async () => {
     try {
-      if (showRefreshIndicator) {
-        setRefreshing(true);
+      setLoading(true);
+      setError(null);
+      
+      const companyData = await getCompanyById(id as string);
+      if (companyData) {
+        setCompany(companyData);
       } else {
-        setLoading(true);
+        setError('Company not found');
       }
-
-      const companyData = await getCompanyById(id!);
-      setCompany(companyData);
-    } catch (error) {
-      console.error('Error loading company data:', error);
-      Alert.alert('Error', 'Failed to load company information');
+    } catch (error: any) {
+      console.error('Error loading company:', error);
+      setError(error.message || 'Failed to load company');
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
-  const onRefresh = React.useCallback(() => {
-    loadCompanyData(true);
-  }, [id]);
+  const handleStartChat = () => {
+    setShowActionModal(false);
+    startLiveChat();
+  };
 
-  const handleStartChat = async () => {
+  const startLiveChat = async () => {
     if (!user || !company) {
-      Alert.alert('Sign In Required', 'Please sign in to start a chat with this company.');
+      Alert.alert('Error', 'Please sign in to start a live chat.');
       return;
     }
 
-    setIsStartingChat(true);
     try {
+      console.log('Starting live chat with company:', company.name);
+      
+      // Start the conversation
       const conversation = await startLiveChatWithCompany(user.id, company.id);
+      
+      // Navigate to the chat screen
       router.push(`/(tabs)/messages/${conversation.id}`);
-    } catch (error) {
-      console.error('Error starting chat:', error);
-      Alert.alert('Error', 'Failed to start chat. Please try again.');
-    } finally {
-      setIsStartingChat(false);
-    }
-  };
-
-  const handleSubmitReview = async (reviewData: NewReview) => {
-    if (!user || !company) {
-      Alert.alert('Sign In Required', 'Please sign in to submit a review.');
-      return;
-    }
-
-    setIsSubmittingReview(true);
-    try {
-      const newReview = await createCompanyReview(
-        company.id,
-        user.id,
-        reviewData.title,
-        reviewData.content,
-        reviewData.rating
+      
+      Alert.alert(
+        'Live Chat Started',
+        `You are now connected with ${company.name}. A customer service representative will assist you shortly.`,
+        [
+          {
+            text: 'OK',
+            onPress: () => {},
+          },
+        ]
       );
-      
-      setCompany(prev => prev ? {
-        ...prev,
-        reviews: [newReview, ...(prev.reviews || [])]
-      } : null);
-      
-      setShowReviewModal(false);
-      Alert.alert('Success', 'Your review has been submitted successfully!');
-    } catch (error) {
-      console.error('Error submitting review:', error);
-      Alert.alert('Error', 'Failed to submit review. Please try again.');
-    } finally {
-      setIsSubmittingReview(false);
+    } catch (error: any) {
+      console.error('Error starting live chat:', error);
+      Alert.alert('Error', 'Failed to start live chat. Please try again.');
     }
   };
 
-  const handleSubmitClaim = async (claimData: NewClaim) => {
-    if (!user || !company) {
-      Alert.alert('Sign In Required', 'Please sign in to submit a claim.');
-      return;
-    }
-
-    setIsSubmittingClaim(true);
-    try {
-      const newClaim = await createCompanyClaim(
-        company.id,
-        user.id,
-        claimData.title,
-        claimData.description,
-        claimData.category,
-        claimData.priority
-      );
-      
-      setCompany(prev => prev ? {
-        ...prev,
-        claims: [newClaim, ...(prev.claims || [])]
-      } : null);
-      
-      setShowClaimModal(false);
-      Alert.alert('Success', 'Your claim has been submitted successfully!');
-    } catch (error) {
-      console.error('Error submitting claim:', error);
-      Alert.alert('Error', 'Failed to submit claim. Please try again.');
-    } finally {
-      setIsSubmittingClaim(false);
-    }
+  const handleWriteReview = () => {
+    setShowActionModal(false);
+    Alert.alert('Write Qdle', 'Opening qdle form...');
+    // TODO: Navigate to qdle form
   };
 
-  const TabButton = ({ 
-    tab, 
-    label, 
-    count 
-  }: { 
-    tab: typeof activeTab; 
-    label: string; 
-    count?: number;
-  }) => (
-    <TouchableOpacity
-      style={[styles.tabButton, activeTab === tab && styles.activeTabButton]}
-      onPress={() => setActiveTab(tab)}
-    >
-      <Text style={[styles.tabButtonText, activeTab === tab && styles.activeTabButtonText]}>
-        {label}
-      </Text>
-      {count !== undefined && (
-        <View style={styles.tabBadge}>
-          <Text style={styles.tabBadgeText}>{count}</Text>
-        </View>
-      )}
-    </TouchableOpacity>
-  );
+  const handleWriteClaim = () => {
+    setShowActionModal(false);
+    Alert.alert('Write Claim', 'Opening claim form...');
+    // TODO: Navigate to claim form
+  };
 
   if (loading) {
     return (
       <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#0A0A0A" />
+        <StatusBar barStyle="light-content" backgroundColor="#1A1A1A" />
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.header}>
-            <TouchableOpacity 
-              style={styles.backButton}
-              onPress={() => router.back()}
-            >
+            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
               <ArrowLeft size={24} color="#FFFFFF" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Company</Text>
           </View>
-          
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#5ce1e6" />
-            <Text style={styles.loadingText}>Loading company information...</Text>
-          </View>
         </SafeAreaView>
+        
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#5ce1e6" />
+          <Text style={styles.loadingText}>Loading company details...</Text>
+        </View>
       </View>
     );
   }
 
-  if (!company) {
+  if (error || !company) {
     return (
       <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#0A0A0A" />
+        <StatusBar barStyle="light-content" backgroundColor="#1A1A1A" />
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.header}>
-            <TouchableOpacity 
-              style={styles.backButton}
-              onPress={() => router.back()}
-            >
+            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
               <ArrowLeft size={24} color="#FFFFFF" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Company</Text>
           </View>
-          
-          <View style={styles.errorContainer}>
-            <Building2 size={64} color="#666666" />
-            <Text style={styles.errorTitle}>Company Not Found</Text>
-            <Text style={styles.errorMessage}>
-              The company you're looking for doesn't exist or has been removed.
-            </Text>
-            <TouchableOpacity 
-              style={styles.retryButton}
-              onPress={() => router.back()}
-            >
-              <Text style={styles.retryButtonText}>Go Back</Text>
-            </TouchableOpacity>
-          </View>
         </SafeAreaView>
+        
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorTitle}>Company Not Found</Text>
+          <Text style={styles.errorMessage}>{error || 'The company you\'re looking for doesn\'t exist.'}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => router.back()}>
+            <Text style={styles.retryButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
-
-  const averageRating = company.rating || 0;
-  const totalReviews = company.total_reviews || 0;
-  const totalClaims = company.total_claims || 0;
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#0A0A0A" />
+      <StatusBar barStyle="light-content" backgroundColor="#1A1A1A" />
+      
+      {/* Header */}
       <SafeAreaView style={styles.safeArea}>
-        {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <ArrowLeft size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Company Details</Text>
-          <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.headerAction}>
-              <Share size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.headerAction}>
-              <Heart size={20} color="#FFFFFF" />
-            </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Company Header */}
+        <View style={styles.companyHeader}>
+          <View style={styles.companyInfo}>
+            <View style={styles.companyMainInfo}>
+              <View style={styles.logoContainer}>
+                {company.logo_url ? (
+                  <Image source={{ uri: company.logo_url }} style={styles.companyLogo} />
+                ) : (
+                  <View style={styles.companyLogoPlaceholder}>
+                    <Building2 size={32} color="#666666" />
+                  </View>
+                )}
+                {company.verified && (
+                  <View style={styles.verifiedBadge}>
+                    <Shield size={16} color="#FFFFFF" />
+                  </View>
+                )}
+              </View>
+              
+              <View style={styles.companyDetails}>
+                <Text style={styles.companyName}>{company.name}</Text>
+                <Text style={styles.companyIndustry}>{company.industry}</Text>
+              </View>
+            </View>
           </View>
         </View>
 
-        <ScrollView 
-          style={styles.content}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#5ce1e6" />
-          }
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Company Header */}
-          <View style={styles.companyHeader}>
-            <View style={styles.companyLogoContainer}>
-              {company.logo_url ? (
-                <Image source={{ uri: company.logo_url }} style={styles.companyLogo} />
+        {/* Live Mood Section */}
+        <LiveMoodSection companyId={company.id} companyName={company.name} />
+
+        {/* Tabs */}
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'reviews' && styles.activeTab]}
+            onPress={() => setActiveTab('reviews')}
+          >
+            <Text style={[styles.tabText, activeTab === 'reviews' && styles.activeTabText]}>
+              Qdles ({company.reviews?.length || 0})
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'claims' && styles.activeTab]}
+            onPress={() => setActiveTab('claims')}
+          >
+            <Text style={[styles.tabText, activeTab === 'claims' && styles.activeTabText]}>
+              Claims ({company.claims?.length || 0})
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Tab Content */}
+        <View style={styles.tabContent}>
+          {activeTab === 'reviews' && (
+            <View>
+              {company.reviews && company.reviews.length > 0 ? (
+                company.reviews.map((review) => (
+                  <ReviewCard key={review.id} review={review} />
+                ))
               ) : (
-                <View style={styles.companyLogoPlaceholder}>
-                  <Building2 size={48} color="#666666" />
-                </View>
-              )}
-              {company.verified && (
-                <View style={styles.verifiedBadge}>
-                  <Shield size={16} color="#FFFFFF" />
-                </View>
-              )}
-            </View>
-            
-            <View style={styles.companyInfo}>
-              <Text style={styles.companyName}>{company.name}</Text>
-              <Text style={styles.companyIndustry}>{company.industry}</Text>
-              
-              <View style={styles.ratingContainer}>
-                <StarRating rating={Math.round(averageRating)} size={16} />
-                <Text style={styles.ratingText}>
-                  {averageRating.toFixed(1)} ({totalReviews} reviews)
-                </Text>
-              </View>
-              
-              {company.address && (
-                <View style={styles.locationContainer}>
-                  <MapPin size={14} color="#666666" />
-                  <Text style={styles.locationText}>
-                    {company.address}, {company.city}
+                <View style={styles.emptyState}>
+                  <Star size={48} color="#3A3A3A" />
+                  <Text style={styles.emptyTitle}>No Qdles Yet</Text>
+                  <Text style={styles.emptyMessage}>
+                    Be the first to share your positive experience with this company.
                   </Text>
                 </View>
               )}
-            </View>
-          </View>
-
-          {/* Company Description */}
-          {company.description && (
-            <View style={styles.descriptionSection}>
-              <Text style={styles.description}>{company.description}</Text>
             </View>
           )}
 
-          {/* Contact Information */}
-          <View style={styles.contactSection}>
-            <Text style={styles.sectionTitle}>Contact Information</Text>
-            <View style={styles.contactGrid}>
-              {company.phone && (
-                <TouchableOpacity style={styles.contactItem}>
-                  <Phone size={20} color="#5ce1e6" />
-                  <Text style={styles.contactText}>{company.phone}</Text>
-                </TouchableOpacity>
-              )}
-              {company.email && (
-                <TouchableOpacity style={styles.contactItem}>
-                  <Mail size={20} color="#5ce1e6" />
-                  <Text style={styles.contactText}>{company.email}</Text>
-                </TouchableOpacity>
-              )}
-              {company.website && (
-                <TouchableOpacity style={styles.contactItem}>
-                  <Globe size={20} color="#5ce1e6" />
-                  <Text style={styles.contactText}>{company.website}</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-
-          {/* Action Buttons */}
-          <View style={styles.actionSection}>
-            <TouchableOpacity 
-              style={styles.primaryAction}
-              onPress={handleStartChat}
-              disabled={isStartingChat}
-            >
-              {isStartingChat ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
+          {activeTab === 'claims' && (
+            <View>
+              {company.claims && company.claims.length > 0 ? (
+                company.claims.map((claim) => (
+                  <ClaimCard key={claim.id} claim={claim} />
+                ))
               ) : (
-                <MessageCircle size={20} color="#FFFFFF" />
-              )}
-              <Text style={styles.primaryActionText}>
-                {isStartingChat ? 'Starting...' : 'Start Live Chat'}
-              </Text>
-            </TouchableOpacity>
-            
-            <View style={styles.secondaryActions}>
-              <TouchableOpacity 
-                style={styles.secondaryAction}
-                onPress={() => setShowReviewModal(true)}
-              >
-                <Star size={18} color="#5ce1e6" />
-                <Text style={styles.secondaryActionText}>Review</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.secondaryAction}
-                onPress={() => setShowClaimModal(true)}
-              >
-                <AlertTriangle size={18} color="#E67E22" />
-                <Text style={styles.secondaryActionText}>Claim</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Stats Section */}
-          <View style={styles.statsSection}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{totalReviews}</Text>
-              <Text style={styles.statLabel}>Reviews</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{totalClaims}</Text>
-              <Text style={styles.statLabel}>Claims</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{averageRating.toFixed(1)}</Text>
-              <Text style={styles.statLabel}>Rating</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{company.verified ? 'Yes' : 'No'}</Text>
-              <Text style={styles.statLabel}>Verified</Text>
-            </View>
-          </View>
-
-          {/* Tabs */}
-          <View style={styles.tabsContainer}>
-            <TabButton tab="overview" label="Overview" />
-            <TabButton tab="reviews" label="Reviews" count={company.reviews?.length || 0} />
-            <TabButton tab="claims" label="Claims" count={company.claims?.length || 0} />
-          </View>
-
-          {/* Tab Content */}
-          <View style={styles.tabContent}>
-            {activeTab === 'overview' && (
-              <View style={styles.overviewContent}>
-                <View style={styles.overviewSection}>
-                  <Text style={styles.overviewSectionTitle}>About {company.name}</Text>
-                  <Text style={styles.overviewText}>
-                    {company.description || 'No description available for this company.'}
+                <View style={styles.emptyState}>
+                  <MessageCircle size={48} color="#3A3A3A" />
+                  <Text style={styles.emptyTitle}>No Claims Yet</Text>
+                  <Text style={styles.emptyMessage}>
+                    No public claims have been made against this company.
                   </Text>
                 </View>
-                
-                <View style={styles.overviewSection}>
-                  <Text style={styles.overviewSectionTitle}>Company Information</Text>
-                  <View style={styles.infoGrid}>
-                    <View style={styles.infoItem}>
-                      <Text style={styles.infoLabel}>Industry</Text>
-                      <Text style={styles.infoValue}>{company.industry}</Text>
-                    </View>
-                    {company.website && (
-                      <View style={styles.infoItem}>
-                        <Text style={styles.infoLabel}>Website</Text>
-                        <Text style={styles.infoValue}>{company.website}</Text>
-                      </View>
-                    )}
-                    {company.city && (
-                      <View style={styles.infoItem}>
-                        <Text style={styles.infoLabel}>Location</Text>
-                        <Text style={styles.infoValue}>{company.city}, {company.country}</Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-              </View>
-            )}
+              )}
+            </View>
+          )}
+        </View>
+      </ScrollView>
 
-            {activeTab === 'reviews' && (
-              <View style={styles.reviewsContent}>
-                {company.reviews && company.reviews.length > 0 ? (
-                  company.reviews.map((review) => (
-                    <ReviewCard key={review.id} review={review} />
-                  ))
-                ) : (
-                  <View style={styles.emptyState}>
-                    <Star size={48} color="#666666" />
-                    <Text style={styles.emptyStateTitle}>No Reviews Yet</Text>
-                    <Text style={styles.emptyStateMessage}>
-                      Be the first to share your experience with this company.
-                    </Text>
-                    <TouchableOpacity 
-                      style={styles.emptyStateButton}
-                      onPress={() => setShowReviewModal(true)}
-                    >
-                      <Text style={styles.emptyStateButtonText}>Write a Review</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-            )}
+      {/* Floating Action Button */}
+      <TouchableOpacity
+        style={styles.floatingButton}
+        onPress={() => setShowActionModal(true)}
+      >
+        <Plus size={24} color="#FFFFFF" />
+      </TouchableOpacity>
 
-            {activeTab === 'claims' && (
-              <View style={styles.claimsContent}>
-                {company.claims && company.claims.length > 0 ? (
-                  company.claims.map((claim) => (
-                    <ClaimCard key={claim.id} claim={claim} />
-                  ))
-                ) : (
-                  <View style={styles.emptyState}>
-                    <AlertTriangle size={48} color="#666666" />
-                    <Text style={styles.emptyStateTitle}>No Claims Yet</Text>
-                    <Text style={styles.emptyStateMessage}>
-                      No customer claims have been submitted for this company.
-                    </Text>
-                    <TouchableOpacity 
-                      style={styles.emptyStateButton}
-                      onPress={() => setShowClaimModal(true)}
-                    >
-                      <Text style={styles.emptyStateButtonText}>Submit a Claim</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-            )}
-          </View>
-        </ScrollView>
-
-        {/* Create Review Modal */}
-        <CreateReviewModal
-          visible={showReviewModal}
-          onClose={() => setShowReviewModal(false)}
-          onSubmit={handleSubmitReview}
-          isLoading={isSubmittingReview}
-        />
-
-        {/* Create Claim Modal */}
-        <CreateClaimModal
-          visible={showClaimModal}
-          onClose={() => setShowClaimModal(false)}
-          onSubmit={handleSubmitClaim}
-          isLoading={isSubmittingClaim}
-        />
-      </SafeAreaView>
+      {/* Action Modal */}
+      <ActionModal
+        visible={showActionModal}
+        onClose={() => setShowActionModal(false)}
+        companyName={company.name}
+        onStartChat={handleStartChat}
+        onWriteReview={handleWriteReview}
+        onWriteClaim={handleWriteClaim}
+      />
     </View>
   );
 }
@@ -950,15 +1507,14 @@ export default function CompanyDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0A',
+    backgroundColor: '#1A1A1A',
   },
   safeArea: {
-    flex: 1,
+    backgroundColor: '#1A1A1A',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
     backgroundColor: '#1A1A1A',
@@ -967,90 +1523,79 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#2A2A2A',
+    marginRight: 12,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#FFFFFF',
-    flex: 1,
-    textAlign: 'center',
-    marginHorizontal: 16,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  headerAction: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#2A2A2A',
   },
   content: {
     flex: 1,
+    backgroundColor: '#1A1A1A',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 40,
+    backgroundColor: '#1A1A1A',
   },
   loadingText: {
+    color: '#FFFFFF',
     fontSize: 16,
-    color: '#666666',
     marginTop: 16,
-    textAlign: 'center',
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 40,
+    backgroundColor: '#1A1A1A',
+    paddingHorizontal: 20,
   },
   errorTitle: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: 'bold',
     color: '#FFFFFF',
-    marginTop: 20,
-    marginBottom: 12,
-    textAlign: 'center',
+    marginBottom: 8,
   },
   errorMessage: {
     fontSize: 16,
-    color: '#666666',
+    color: '#CCCCCC',
     textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 32,
+    marginBottom: 24,
   },
   retryButton: {
     backgroundColor: '#5ce1e6',
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: 8,
   },
   retryButtonText: {
-    color: '#FFFFFF',
+    color: '#1A1A1A',
     fontSize: 16,
     fontWeight: '600',
   },
   companyHeader: {
-    flexDirection: 'row',
     padding: 20,
-    backgroundColor: '#1A1A1A',
     borderBottomWidth: 1,
     borderBottomColor: '#2A2A2A',
   },
-  companyLogoContainer: {
+  companyInfo: {
+    gap: 16,
+  },
+  companyMainInfo: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 16,
+  },
+  logoContainer: {
     position: 'relative',
-    marginRight: 16,
   },
   companyLogo: {
     width: 80,
     height: 80,
     borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#2A2A2A',
+    backgroundColor: '#2A2A2A',
   },
   companyLogoPlaceholder: {
     width: 80,
@@ -1059,8 +1604,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#2A2A2A',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#3A3A3A',
   },
   verifiedBadge: {
     position: 'absolute',
@@ -1069,293 +1612,191 @@ const styles = StyleSheet.create({
     backgroundColor: '#27AE60',
     borderRadius: 12,
     padding: 4,
-    borderWidth: 2,
-    borderColor: '#1A1A1A',
   },
-  companyInfo: {
+  companyDetails: {
     flex: 1,
-    justifyContent: 'center',
+    gap: 4,
   },
   companyName: {
     fontSize: 24,
-    fontWeight: '800',
+    fontWeight: 'bold',
     color: '#FFFFFF',
-    marginBottom: 4,
   },
   companyIndustry: {
     fontSize: 16,
-    color: '#5ce1e6',
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  ratingText: {
-    fontSize: 14,
     color: '#CCCCCC',
-    marginLeft: 8,
-    fontWeight: '500',
   },
-  locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  locationText: {
-    fontSize: 14,
-    color: '#666666',
-    marginLeft: 6,
-  },
-  descriptionSection: {
+  liveMoodSection: {
     padding: 20,
-    backgroundColor: '#1A1A1A',
     borderBottomWidth: 1,
     borderBottomColor: '#2A2A2A',
+    gap: 16,
   },
-  description: {
-    fontSize: 16,
-    color: '#CCCCCC',
-    lineHeight: 24,
+  liveMoodHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  contactSection: {
-    padding: 20,
-    backgroundColor: '#1A1A1A',
-    borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+  liveMoodTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
     color: '#FFFFFF',
-    marginBottom: 16,
   },
-  contactGrid: {
+  liveMoodTrend: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  liveMoodTrendText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  moodVisualization: {
     gap: 12,
   },
-  contactItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  moodBar: {
+    height: 8,
     backgroundColor: '#2A2A2A',
-    padding: 16,
-    borderRadius: 12,
+    borderRadius: 4,
+    position: 'relative',
+    overflow: 'hidden',
   },
-  contactText: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    marginLeft: 12,
-    fontWeight: '500',
+  moodBarFill: {
+    height: '100%',
+    position: 'absolute',
+    top: 0,
   },
-  actionSection: {
-    padding: 20,
-    backgroundColor: '#1A1A1A',
-    borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
+  moodBarPositive: {
+    backgroundColor: '#27AE60',
+    left: 0,
   },
-  primaryAction: {
+  moodBarNegative: {
+    backgroundColor: '#E74C3C',
+  },
+  moodStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  moodStat: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#5ce1e6',
-    paddingVertical: 16,
-    borderRadius: 12,
-    marginBottom: 16,
-    gap: 8,
-  },
-  primaryActionText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  secondaryActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  secondaryAction: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#2A2A2A',
-    paddingVertical: 14,
-    borderRadius: 12,
-    gap: 8,
-  },
-  secondaryActionText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  statsSection: {
-    flexDirection: 'row',
-    backgroundColor: '#1A1A1A',
-    borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 20,
-    borderRightWidth: 1,
-    borderRightColor: '#2A2A2A',
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#666666',
-    fontWeight: '500',
-  },
-  tabsContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#1A1A1A',
-    borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
-  },
-  tabButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
     gap: 6,
   },
-  activeTabButton: {
-    borderBottomWidth: 2,
-    borderBottomColor: '#5ce1e6',
+  moodStatText: {
+    fontSize: 14,
+    color: '#CCCCCC',
   },
-  tabButtonText: {
+  moodVoting: {
+    gap: 12,
+  },
+  moodVotingTitle: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  moodVotingButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  moodVoteButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+  },
+  moodVoteButtonPositive: {
+    borderColor: '#27AE60',
+    backgroundColor: 'transparent',
+  },
+  moodVoteButtonNegative: {
+    borderColor: '#E74C3C',
+    backgroundColor: 'transparent',
+  },
+  moodVoteButtonActivePositive: {
+    backgroundColor: '#27AE60',
+    borderColor: '#27AE60',
+  },
+  moodVoteButtonActiveNegative: {
+    backgroundColor: '#E74C3C',
+    borderColor: '#E74C3C',
+  },
+  moodVoteButtonDisabled: {
+    opacity: 0.5,
+  },
+  moodVoteButtonText: {
     fontSize: 16,
     fontWeight: '600',
+    color: '#27AE60',
+  },
+  moodVoteButtonNegativeText: {
+    color: '#E74C3C',
+  },
+  moodVoteButtonTextActivePositive: {
+    color: '#FFFFFF',
+  },
+  moodVoteButtonTextActiveNegative: {
+    color: '#FFFFFF',
+  },
+  moodVoteStatus: {
+    fontSize: 14,
+    color: '#CCCCCC',
+    textAlign: 'center',
+  },
+  moodLastUpdated: {
+    fontSize: 12,
     color: '#666666',
+    textAlign: 'center',
   },
-  activeTabButtonText: {
-    color: '#5ce1e6',
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#2A2A2A',
   },
-  tabBadge: {
-    backgroundColor: '#5ce1e6',
-    borderRadius: 10,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    minWidth: 20,
+  tab: {
+    flex: 1,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     alignItems: 'center',
   },
-  tabBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
+  activeTab: {
+    backgroundColor: '#5ce1e6',
+  },
+  tabText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#CCCCCC',
+  },
+  activeTabText: {
+    color: '#1A1A1A',
   },
   tabContent: {
     flex: 1,
   },
-  overviewContent: {
-    padding: 20,
-  },
-  overviewSection: {
-    marginBottom: 24,
-  },
-  overviewSectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 12,
-  },
-  overviewText: {
-    fontSize: 16,
-    color: '#CCCCCC',
-    lineHeight: 24,
-  },
-  infoGrid: {
-    gap: 12,
-  },
-  infoItem: {
-    backgroundColor: '#2A2A2A',
-    padding: 16,
-    borderRadius: 12,
-  },
-  infoLabel: {
-    fontSize: 14,
-    color: '#666666',
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  infoValue: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  reviewsContent: {
-    padding: 20,
-    gap: 16,
-  },
-  claimsContent: {
-    padding: 20,
-    gap: 16,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  emptyStateTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptyStateMessage: {
-    fontSize: 16,
-    color: '#666666',
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 24,
-  },
-  emptyStateButton: {
-    backgroundColor: '#5ce1e6',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  emptyStateButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  starContainer: {
-    flexDirection: 'row',
-    gap: 2,
-  },
-  interactiveStar: {
-    padding: 2,
-  },
   reviewCard: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#2A2A2A',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2A2A2A',
+    gap: 12,
   },
   reviewHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
   },
   reviewUserInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
     flex: 1,
   },
   reviewAvatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    marginRight: 12,
   },
   reviewAvatarPlaceholder: {
     width: 40,
@@ -1364,10 +1805,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#2A2A2A',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
   },
   reviewUserDetails: {
     flex: 1,
+    gap: 2,
   },
   reviewUserName: {
     flexDirection: 'row',
@@ -1380,150 +1821,160 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   reviewTime: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#666666',
-    marginTop: 2,
   },
   reviewTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '600',
     color: '#FFFFFF',
-    marginBottom: 8,
   },
   reviewContent: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#CCCCCC',
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  verifiedPurchase: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 12,
-  },
-  verifiedPurchaseText: {
-    fontSize: 12,
-    color: '#27AE60',
-    fontWeight: '600',
-  },
-  reviewActions: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  reviewAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  reviewActionText: {
-    fontSize: 12,
-    color: '#666666',
-    fontWeight: '500',
+    lineHeight: 24,
   },
   claimCard: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#2A2A2A',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2A2A2A',
+    gap: 12,
   },
   claimHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
   },
   claimUserInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
     flex: 1,
   },
   claimAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    marginRight: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   claimAvatarPlaceholder: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#2A2A2A',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
   },
   claimUserDetails: {
     flex: 1,
+    gap: 2,
   },
   claimUserName: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
   claimUserNameText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
   },
   claimTime: {
-    fontSize: 11,
+    fontSize: 14,
     color: '#666666',
-    marginTop: 1,
   },
   claimBadges: {
-    flexDirection: 'row',
-    gap: 6,
+    gap: 4,
   },
   claimBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 4,
   },
   claimBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
     color: '#FFFFFF',
+    textTransform: 'capitalize',
   },
   claimTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '600',
     color: '#FFFFFF',
-    marginBottom: 8,
   },
   claimDescription: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#CCCCCC',
-    lineHeight: 20,
-    marginBottom: 8,
+    lineHeight: 24,
+  },
+  claimFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   claimCategory: {
-    fontSize: 12,
-    color: '#666666',
+    fontSize: 14,
+    color: '#5ce1e6',
     fontWeight: '500',
-    marginBottom: 8,
   },
-  resolutionNotes: {
+  claimCoins: {
+    fontSize: 14,
+    color: '#F39C12',
+    fontWeight: '600',
+  },
+  claimResolution: {
     backgroundColor: '#2A2A2A',
     padding: 12,
     borderRadius: 8,
-    marginTop: 8,
+    gap: 6,
   },
-  resolutionNotesTitle: {
-    fontSize: 12,
+  claimResolutionTitle: {
+    fontSize: 14,
     fontWeight: '600',
-    color: '#5ce1e6',
-    marginBottom: 4,
+    color: '#27AE60',
   },
-  resolutionNotesText: {
-    fontSize: 12,
+  claimResolutionText: {
+    fontSize: 14,
     color: '#CCCCCC',
-    lineHeight: 16,
+    lineHeight: 20,
+  },
+  emptyState: {
+    padding: 40,
+    alignItems: 'center',
+    gap: 16,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  emptyMessage: {
+    fontSize: 16,
+    color: '#CCCCCC',
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  floatingButton: {
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#5ce1e6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#0A0A0A',
+    backgroundColor: '#1A1A1A',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1531,106 +1982,269 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: '#2A2A2A',
     borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
+    borderBottomColor: '#3A3A3A',
+  },
+  modalCloseButton: {
+    padding: 8,
+    backgroundColor: '#E74C3C',
+    borderRadius: 20,
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  submitButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  submitButtonText: {
-    fontSize: 16,
     fontWeight: '600',
-    color: '#5ce1e6',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    flex: 1,
+  },
+  modalPlaceholder: {
+    width: 40,
   },
   modalContent: {
     flex: 1,
     padding: 20,
   },
-  ratingSection: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  sectionLabel: {
+  modalSubtitle: {
     fontSize: 16,
+    color: '#CCCCCC',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  actionOptions: {
+    gap: 16,
+  },
+  actionOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#2A2A2A',
+    borderRadius: 12,
+    gap: 16,
+  },
+  actionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionContent: {
+    flex: 1,
+    gap: 4,
+  },
+  actionTitle: {
+    fontSize: 18,
     fontWeight: '600',
     color: '#FFFFFF',
-    marginBottom: 12,
   },
-  inputSection: {
-    marginBottom: 24,
-  },
-  titleInput: {
-    backgroundColor: '#2A2A2A',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#3A3A3A',
-  },
-  contentInput: {
-    backgroundColor: '#2A2A2A',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#3A3A3A',
-    minHeight: 120,
-    textAlignVertical: 'top',
-  },
-  categoryScroll: {
-    marginBottom: 8,
-  },
-  categoryChip: {
-    backgroundColor: '#2A2A2A',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: '#3A3A3A',
-  },
-  selectedCategoryChip: {
-    backgroundColor: '#5ce1e6',
-    borderColor: '#5ce1e6',
-  },
-  categoryChipText: {
+  actionDescription: {
     fontSize: 14,
-    fontWeight: '500',
     color: '#CCCCCC',
+    lineHeight: 20,
   },
-  selectedCategoryChipText: {
-    color: '#FFFFFF',
+  // Instagram-style Toxic Blue Heart Reaction Styles
+  postReactions: {
+    marginTop: 16,
   },
-  priorityContainer: {
+  instagramReactionContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
-  priorityChip: {
-    flex: 1,
-    backgroundColor: '#2A2A2A',
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#3A3A3A',
+  instagramHeartButton: {
+    padding: 4,
   },
-  selectedPriorityChip: {
-    backgroundColor: '#2A2A2A',
-  },
-  priorityChipText: {
+  instagramHeartCount: {
     fontSize: 14,
     fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  instagramHeartCountActive: {
+    color: '#00BFFF',
+  },
+  // Comments System Styles
+  commentsSection: {
+    marginTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#2A2A2A',
+    paddingTop: 12,
+  },
+  commentsToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+  },
+  commentsToggleText: {
+    fontSize: 14,
+    color: '#666666',
+    fontWeight: '500',
+  },
+  commentsContainer: {
+    marginTop: 12,
+    gap: 16,
+  },
+  commentInputContainer: {
+    gap: 8,
+  },
+  replyingToContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#2A2A2A',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  replyingToText: {
+    fontSize: 12,
+    color: '#00BFFF',
+    fontWeight: '500',
+  },
+  commentInputRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 12,
+    backgroundColor: '#2A2A2A',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  commentInputAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
+  commentInputAvatarPlaceholder: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#3A3A3A',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  commentInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#FFFFFF',
+    maxHeight: 80,
+    paddingVertical: 0,
+  },
+  commentSubmitButton: {
+    padding: 8,
+  },
+  commentSubmitButtonDisabled: {
+    opacity: 0.5,
+  },
+  commentsList: {
+    gap: 12,
+  },
+  commentItem: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: 12,
+    padding: 12,
+    gap: 8,
+  },
+  replyItem: {
+    marginLeft: 20,
+    backgroundColor: '#3A3A3A',
+  },
+  commentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  commentUserInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  commentAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+  },
+  commentAvatarPlaceholder: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#4A4A4A',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  commentUserDetails: {
+    flex: 1,
+  },
+  commentUserName: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  commentUserNameText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  commentTime: {
+    fontSize: 12,
+    color: '#666666',
+  },
+  commentOptionsButton: {
+    padding: 4,
+  },
+  commentContent: {
+    fontSize: 14,
     color: '#CCCCCC',
+    lineHeight: 20,
+  },
+  commentActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  commentReactionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  commentHeartButton: {
+    padding: 2,
+  },
+  commentHeartCount: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666666',
+  },
+  commentHeartCountActive: {
+    color: '#00BFFF',
+  },
+  commentReplyButton: {
+    padding: 4,
+  },
+  commentReplyText: {
+    fontSize: 12,
+    color: '#666666',
+    fontWeight: '500',
+  },
+  repliesContainer: {
+    marginTop: 8,
+    gap: 8,
+  },
+  noCommentsContainer: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    gap: 8,
+  },
+  noCommentsText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  noCommentsSubtext: {
+    fontSize: 14,
+    color: '#666666',
+    textAlign: 'center',
   },
 });

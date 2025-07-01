@@ -16,6 +16,7 @@ import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { ArrowLeft, Send, MessageCircle, Shield, Plus, ThumbsUp, ThumbsDown, TrendingUp, TrendingDown } from 'lucide-react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '@/contexts/AuthContext';
+import { LiveMoodWidget } from '@/components/LiveMoodWidget';
 
 interface ChatMessage {
   id: string;
@@ -403,6 +404,18 @@ export default function ChatScreen() {
         </View>
       </View>
 
+      {/* LiveMood Widget */}
+      {company && (
+        <View style={styles.liveMoodContainer}>
+          <LiveMoodWidget 
+            companyId={company.id} 
+            companyName={company.name}
+            compact={true}
+            showTitle={true}
+          />
+        </View>
+      )}
+
       {/* Messages */}
       <FlatList
         ref={flatListRef}
@@ -485,6 +498,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  liveMoodContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
   },
   messagesList: {
     flex: 1,
