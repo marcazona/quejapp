@@ -212,11 +212,6 @@ export default function CompanyScreen() {
               ) : (
                 <View style={styles.companyLogoPlaceholder} />
               )}
-              {company.verified && (
-                <View style={styles.verifiedBadge}>
-                  <Shield size={12} color="#FFFFFF" />
-                </View>
-              )}
             </View>
             
             <View style={styles.companyDetails}>
@@ -497,19 +492,6 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 16,
     backgroundColor: '#2A2A2A',
-  },
-  verifiedBadge: {
-    position: 'absolute',
-    bottom: -6,
-    right: -6,
-    backgroundColor: '#27AE60',
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#1A1A1A',
   },
   verifiedBadgeInline: {
     backgroundColor: '#27AE60',
