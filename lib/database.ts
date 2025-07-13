@@ -83,8 +83,10 @@ export interface CompanyClaim {
 export interface Post {
   id: string;
   user_id: string;
+  company_id?: string;
   content: string;
   photo_url: string | null;
+  post_type?: 'qudo' | 'claim';
   likes_count: number | null;
   comments_count: number | null;
   created_at: string;

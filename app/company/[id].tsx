@@ -11,6 +11,8 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { ArrowLeft, Star, MessageCircle, Shield, MapPin, Globe, Phone, Mail, Heart, ThumbsUp, ThumbsDown, Plus } from 'lucide-react-native';
