@@ -13,7 +13,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { ArrowLeft, Star, MessageCircle, Shield, MapPin, Globe, Phone, Mail, Heart, ThumbsUp, ThumbsDown } from 'lucide-react-native';
+import { ArrowLeft, Star, MessageCircle, Shield, MapPin, Globe, Phone, Mail, Heart, ThumbsUp, ThumbsDown, Plus } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { getCompanyById, type FullCompanyProfile } from '@/lib/database';
 import { getUserPostsForCompany, createPost, likePost, type Post } from '@/lib/database';
