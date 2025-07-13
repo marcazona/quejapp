@@ -17,7 +17,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { ArrowLeft, MapPin, Phone, Mail, Globe, Star, MessageCircle, Shield, Clock, Users, Building2, Send, X, Plus, User } from 'lucide-react-native';
+import { ArrowLeft, MapPin, Phone, Mail, Globe, Star, Shield, Clock, Users, Building2, Send, X, Plus, User } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   getCompanyById,
@@ -395,13 +395,6 @@ export default function CompanyProfileScreen() {
             
             <View style={styles.companyInfo}>
               <Text style={styles.companyName}>{company.name}</Text>
-              <TouchableOpacity 
-                style={styles.chatButton}
-                onPress={handleStartChat}
-              >
-                <MessageCircle size={16} color="#FFFFFF" />
-                <Text style={styles.chatButtonText}>Chat</Text>
-              </TouchableOpacity>
               <Text style={styles.companyIndustry}>{company.industry}</Text>
               
               {/* Removed rating stars section */}
