@@ -95,8 +95,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Create a timeout promise
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => {
-          reject(new Error('Profile fetch timeout - request took too long'));
-        }, 15000); // 15 second timeout
+          reject(new Error('Profile fetch timeout - request took too long. Continuing with limited functionality.'));
+        }, 30000); // 30 second timeout
       });
 
       // Create the supabase query promise
@@ -117,10 +117,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (error) {
         console.error('AuthProvider: Error fetching user profile:', error);
         
-        if (isNetworkError(error) || error.message?.includes('timeout')) {
-          console.log('AuthProvider: Network/timeout error, continuing with limited functionality');
+        if (isNetworkError(error) || error.message?.includes('timeout') || error.message?.includes('continuing with limited functionality')) {
+          console.log('AuthProvider: Network/timeout error, continuing with limited functionality', error.message);
           // Don't set error state for network issues, just log and continue
-          setUser(null);
+          // Allow the app to continue without user profile data
           setIsLoading(false);
           return;
         }
