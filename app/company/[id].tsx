@@ -549,6 +549,7 @@ const styles = StyleSheet.create({
   followButton: {
     width: 40,
     height: 40,
+    marginTop: -20, // Move the button 20% up
     borderRadius: 20,
     backgroundColor: '#2A2A2A',
     justifyContent: 'center',
