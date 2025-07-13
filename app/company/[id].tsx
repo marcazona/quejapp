@@ -467,20 +467,34 @@ export default function CompanyProfileScreen() {
               </View>
             )}
             
-            {company.email && (
-              <View style={styles.contactItem}>
-                <Mail size={20} color="#5ce1e6" />
-                <Text style={styles.contactText}>{company.email}</Text>
+            <View style={styles.companyInfoRow}>
+              <View style={styles.statsRow}>
+                <View style={styles.statItem}>
+                  <Star size={14} color="#FFD700" />
+                  <Text style={styles.statText}>
+                    {company.total_reviews || 0} Qudos
+                  </Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <MessageCircle size={14} color="#E67E22" />
+                  <Text style={styles.statText}>
+                    {company.total_claims || 0} Claims
+                  </Text>
+                </View>
               </View>
-            )}
-            
-            {(company.address || company.city || company.country) && (
-              <View style={styles.contactItem}>
-                <MapPin size={20} color="#5ce1e6" />
-                <Text style={styles.contactText}>
-                  {[company.address, company.city, company.country].filter(Boolean).join(', ')}
+              
+              <TouchableOpacity 
+                style={styles.followButton}
+                onPress={handleToggleFollow}
+                accessibilityLabel={isFollowing ? "Unfollow company" : "Follow company"}
+              >
+                <Heart 
+                  size={22} 
+                  color={isFollowing ? "#E74C3C" : "#FFFFFF"} 
+                  fill={isFollowing ? "#E74C3C" : "transparent"} 
                 </Text>
-              </View>
+              </TouchableOpacity>
             )}
           </View>
 
@@ -732,7 +746,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     paddingHorizontal: 20,
     paddingVertical: 16,
     backgroundColor: '#1A1A1A',
@@ -746,11 +760,6 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     width: 40,
-  },
-  followButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#2A2A2A',
   },
   companyName: {
     fontSize: 24,
@@ -851,6 +860,17 @@ const styles = StyleSheet.create({
     color: '#666666',
     marginBottom: 8,
   },
+  companyInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  followButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#2A2A2A',
+  },
   ratingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -868,7 +888,6 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
   },
   statItem: {
     flexDirection: 'row',
