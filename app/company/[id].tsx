@@ -40,7 +40,7 @@ interface CompanyPost {
 const PostCard = ({ post, onLike }: { 
   post: CompanyPost; 
   onLike: (postId: string) => void;
-}) => {
+}) => { 
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(post.likes_count || 0);
 
@@ -101,21 +101,19 @@ const PostCard = ({ post, onLike }: {
       {post.photo_url && (
         <Image source={{ uri: post.photo_url }} style={styles.postImage} />
       )}
-
+      
       {/* Post Actions */}
       <View style={styles.postActions}>
         <TouchableOpacity 
           style={styles.likeButton}
-          onPress={handleLike}
+          onPress={() => onLike(post.id)}
         >
-          <ThumbsUp 
-            size={18} 
-            color={isLiked ? "#5ce1e6" : "#666666"} 
-            fill={isLiked ? "#5ce1e6" : "transparent"}
-          />
-          <Text style={[styles.likeCount, isLiked && styles.likedText]}>
-            {likesCount}
-          </Text>
+          <ThumbsUp size={18} color={isLiked ? "#5ce1e6" : "#666666"} fill={isLiked ? "#5ce1e6" : "transparent"} />
+          <Text style={[styles.likeCount, isLiked && styles.likedText]}>{likesCount}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.commentButton} onPress={() => handleViewComments(post.id)}>
+          <MessageCircle size={18} color="#666666" />
+          <Text style={styles.commentCount}>{post.comments_count || 0}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -321,7 +319,7 @@ export default function CompanyScreen() {
   const [showComments, setShowComments] = useState<string | null>(null);
   const [comments, setComments] = useState<PostComment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
-  const [newComment, setNewComment] = useState('');
+  const [newComment, setNewComment] = useState(''); 
   const [showCreatePost, setShowCreatePost] = useState(false);
 
   useEffect(() => {
@@ -460,7 +458,6 @@ export default function CompanyScreen() {
     try {
       setLoadingComments(true);
       setShowComments(postId);
-      
       const postComments = await getPostComments(postId);
       setComments(postComments);
     } catch (error) {
@@ -709,30 +706,8 @@ export default function CompanyScreen() {
                 <View key={post.id}>
                   <PostCard 
                     post={post} 
-                    onLike={handleLikePost} 
+                    onLike={handleLikePost}
                   />
-                  <View style={styles.postActions}>
-                    <TouchableOpacity 
-                      style={styles.likeButton}
-                      onPress={() => handleLikePost(post.id)}
-                    >
-                      <ThumbsUp 
-                        size={18} 
-                        color="#666666" 
-                        fill="transparent"
-                      />
-                      <Text style={styles.likeCount}>
-                        {post.likes_count}
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={styles.commentButton}
-                      onPress={() => handleViewComments(post.id)}
-                    >
-                      <MessageCircle size={18} color="#666666" />
-                      <Text style={styles.commentCount}>{post.comments_count || 0}</Text>
-                    </TouchableOpacity>
-                  </View>
                 </View>
               ))
             ) : (
@@ -1054,20 +1029,21 @@ const styles = StyleSheet.create({
   postContent: {
     fontSize: 16,
     color: '#FFFFFF',
-    lineHeight: 24,
-    marginBottom: 12,
+    lineHeight: 24, 
+    marginBottom: 16,
   },
   postImage: {
     width: '100%',
     height: 200,
     borderRadius: 12,
-    marginBottom: 12,
+    marginBottom: 16,
     backgroundColor: '#2A2A2A',
   },
   postActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 12,
+    marginBottom: 4,
   },
   likeButton: {
     flexDirection: 'row',
