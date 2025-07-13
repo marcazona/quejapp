@@ -5,6 +5,7 @@ import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 
 // Global flag to prevent redundant auth initialization across component remounts
 let _authInitialized = false;
+let _authSubscription: any = null;
 
 type UserProfile = Database['public']['Tables']['user_profiles']['Row'];
 
@@ -245,16 +246,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('AuthProvider: useEffect triggered - setting up auth');
     mounted.current = true;
     
-    // Prevent multiple initializations
+    // Set the flag immediately to prevent re-initialization
     if (_authInitialized) {
       console.log('AuthProvider: Already initialized, skipping setup');
       return;
     }
+    _authInitialized = true;
 
-    console.log('AuthProvider: Setting up auth state listener');
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(handleAuthStateChange);
+    // Only set up subscription if we don't have one
+    if (!_authSubscription) {
+      console.log('AuthProvider: Setting up auth state listener');
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange(handleAuthStateChange);
+      _authSubscription = subscription;
+    }
 
     console.log('AuthProvider: Starting auth initialization');
     initializeAuth();
@@ -262,7 +268,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => {
       console.log('AuthProvider: Cleanup - unmounting component');
       mounted.current = false;
-      subscription.unsubscribe();
+      // Don't unsubscribe or reset the flag on component unmount
+      // This allows the subscription to persist across remounts
     };
   }, [handleAuthStateChange, initializeAuth]);
 
