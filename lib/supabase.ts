@@ -26,8 +26,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: Platform.OS === 'web',
     // Use PKCE flow for better security and persistence
     flowType: 'pkce',
-    // Use AsyncStorage for React Native session persistence
-    storage: AsyncStorage,
+    // Use platform-specific storage for session persistence
+    storage: Platform.OS === 'web' ? window.localStorage : AsyncStorage,
   },
   global: {
     headers: {
