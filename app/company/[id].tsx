@@ -16,7 +16,205 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { ArrowLeft, Star, MessageCircle, Shield, MapPin, Globe, Phone, Mail, Heart, ThumbsUp, ThumbsDown } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { getCompanyById, type FullCompanyProfile } from '@/lib/database';
-import { LiveMoodWidget } from '@/components/LiveMoodWidget';
+import { getUserPostsForCompany, createPost, likePost, type Post } from '@/lib/database';
+
+interface CompanyPost {
+  id: string;
+  user_id: string;
+  company_id: string;
+  content: string;
+  photo_url: string | null;
+  post_type: 'qudo' | 'claim';
+  likes_count: number;
+  comments_count: number;
+  created_at: string;
+  user_profiles?: {
+    first_name: string;
+    last_name: string;
+    avatar_url: string | null;
+    verified: boolean | null;
+  };
+}
+
+const PostCard = ({ post, onLike }: { 
+  post: CompanyPost; 
+  onLike: (postId: string) => void;
+}) => {
+  const [isLiked, setIsLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(post.likes_count || 0);
+
+  const handleLike = () => {
+    setIsLiked(!isLiked);
+    setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
+    onLike(post.id);
+  };
+
+  const getTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffHours < 1) return 'now';
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  return (
+    <View style={styles.postCard}>
+      {/* Post Header */}
+      <View style={styles.postHeader}>
+        <View style={styles.userInfo}>
+          <View style={styles.avatarContainer}>
+            {post.user_profiles?.avatar_url ? (
+              <Image source={{ uri: post.user_profiles.avatar_url }} style={styles.userAvatar} />
+            ) : (
+              <View style={styles.userAvatarPlaceholder} />
+            )}
+          </View>
+          
+          <View style={styles.userDetails}>
+            <Text style={styles.userName}>
+              {post.user_profiles?.first_name} {post.user_profiles?.last_name}
+            </Text>
+            <Text style={styles.postTime}>{getTimeAgo(post.created_at)}</Text>
+          </View>
+        </View>
+        
+        <View style={[
+          styles.postTypeBadge, 
+          post.post_type === 'qudo' ? styles.qudoBadge : styles.claimBadge
+        ]}>
+          <Text style={styles.postTypeBadgeText}>
+            {post.post_type === 'qudo' ? 'Qudo' : 'Claim'}
+          </Text>
+        </View>
+      </View>
+
+      {/* Post Content */}
+      <Text style={styles.postContent}>{post.content}</Text>
+      
+      {/* Post Image (if any) */}
+      {post.photo_url && (
+        <Image source={{ uri: post.photo_url }} style={styles.postImage} />
+      )}
+
+      {/* Post Actions */}
+      <View style={styles.postActions}>
+        <TouchableOpacity 
+          style={styles.likeButton}
+          onPress={handleLike}
+        >
+          <ThumbsUp 
+            size={18} 
+            color={isLiked ? "#5ce1e6" : "#666666"} 
+            fill={isLiked ? "#5ce1e6" : "transparent"}
+          />
+          <Text style={[styles.likeCount, isLiked && styles.likedText]}>
+            {likesCount}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+const CreatePostModal = ({ 
+  visible, 
+  onClose, 
+  onSubmit, 
+  companyId, 
+  companyName 
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onSubmit: (content: string, postType: 'qudo' | 'claim') => void;
+  companyId: string;
+  companyName: string;
+}) => {
+  const [content, setContent] = useState('');
+  const [postType, setPostType] = useState<'qudo' | 'claim'>('qudo');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = () => {
+    if (!content.trim()) {
+      Alert.alert('Error', 'Please write something to post');
+      return;
+    }
+
+    setIsSubmitting(true);
+    onSubmit(content, postType);
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>
+              {postType === 'qudo' ? 'Share a Qudo' : 'File a Claim'}
+            </Text>
+            <TouchableOpacity onPress={onClose}>
+              <Text style={styles.closeButton}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.postTypeSelector}>
+            <TouchableOpacity 
+              style={[styles.postTypeButton, postType === 'qudo' && styles.activePostTypeButton]}
+              onPress={() => setPostType('qudo')}
+            >
+              <Star size={18} color={postType === 'qudo' ? "#FFFFFF" : "#FFD700"} />
+              <Text style={[styles.postTypeButtonText, postType === 'qudo' && styles.activePostTypeButtonText]}>
+                Qudo
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.postTypeButton, postType === 'claim' && styles.activePostTypeButton]}
+              onPress={() => setPostType('claim')}
+            >
+              <MessageCircle size={18} color={postType === 'claim' ? "#FFFFFF" : "#FF6B6B"} />
+              <Text style={[styles.postTypeButtonText, postType === 'claim' && styles.activePostTypeButtonText]}>
+                Claim
+              </Text>
+            </TouchableOpacity>
+          </View>
+          
+          <Text style={styles.companyLabel}>
+            About: <Text style={styles.companyName}>{companyName}</Text>
+          </Text>
+          
+          <TextInput
+            style={styles.contentInput}
+            placeholder={postType === 'qudo' ? "What do you like about this company?" : "What issue would you like to report?"}
+            placeholderTextColor="#666666"
+            multiline
+            value={content}
+            onChangeText={setContent}
+          />
+          
+          <TouchableOpacity 
+            style={[styles.submitButton, !content.trim() && styles.submitButtonDisabled]}
+            onPress={handleSubmit}
+            disabled={!content.trim() || isSubmitting}
+          >
+            <Text style={styles.submitButtonText}>
+              {isSubmitting ? 'Posting...' : 'Post'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+};
 
 export default function CompanyScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -24,11 +222,20 @@ export default function CompanyScreen() {
   const [company, setCompany] = useState<FullCompanyProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [posts, setPosts] = useState<CompanyPost[]>([]);
+  const [loadingPosts, setLoadingPosts] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [showCreatePost, setShowCreatePost] = useState(false);
 
   useEffect(() => {
     loadCompany();
   }, [id]);
+
+  useEffect(() => {
+    if (company) {
+      loadCompanyPosts();
+    }
+  }, [company]);
 
   const loadCompany = async () => {
     if (!id) {
@@ -52,6 +259,75 @@ export default function CompanyScreen() {
       setError(error.message || 'Failed to load company');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCompanyPosts = async () => {
+    if (!company) return;
+    
+    try {
+      setLoadingPosts(true);
+      
+      // Mock data for now - in a real app, this would fetch from the database
+      const mockPosts: CompanyPost[] = [
+        {
+          id: '1',
+          user_id: 'user1',
+          company_id: company.id,
+          content: 'Great customer service! They resolved my issue quickly and professionally.',
+          photo_url: null,
+          post_type: 'qudo',
+          likes_count: 12,
+          comments_count: 3,
+          created_at: new Date(Date.now() - 3600000 * 24).toISOString(),
+          user_profiles: {
+            first_name: 'John',
+            last_name: 'Doe',
+            avatar_url: 'https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=100&h=100',
+            verified: true,
+          },
+        },
+        {
+          id: '2',
+          user_id: 'user2',
+          company_id: company.id,
+          content: 'I had an issue with my recent purchase. The product arrived damaged and customer support has been unresponsive for days.',
+          photo_url: 'https://images.pexels.com/photos/4068314/pexels-photo-4068314.jpeg?auto=compress&cs=tinysrgb&w=600',
+          post_type: 'claim',
+          likes_count: 8,
+          comments_count: 5,
+          created_at: new Date(Date.now() - 3600000 * 48).toISOString(),
+          user_profiles: {
+            first_name: 'Jane',
+            last_name: 'Smith',
+            avatar_url: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=100&h=100',
+            verified: false,
+          },
+        },
+        {
+          id: '3',
+          user_id: 'user3',
+          company_id: company.id,
+          content: 'Absolutely love their products! The quality is outstanding and worth every penny.',
+          photo_url: null,
+          post_type: 'qudo',
+          likes_count: 24,
+          comments_count: 2,
+          created_at: new Date(Date.now() - 3600000 * 72).toISOString(),
+          user_profiles: {
+            first_name: 'Michael',
+            last_name: 'Johnson',
+            avatar_url: null,
+            verified: true,
+          },
+        },
+      ];
+      
+      setPosts(mockPosts);
+    } catch (error: any) {
+      console.error('Error loading company posts:', error);
+    } finally {
+      setLoadingPosts(false);
     }
   };
 
@@ -83,11 +359,11 @@ export default function CompanyScreen() {
     // TODO: Implement actual database call to add/remove follower
   };
 
-  const handleStartChat = () => {
+  const handleLikePost = (postId: string) => {
     if (!user) {
       Alert.alert(
         'Sign In Required',
-        'Please sign in to chat with companies',
+        'Please sign in to like posts',
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Sign In', onPress: () => router.push('/(auth)/signin') }
@@ -96,48 +372,29 @@ export default function CompanyScreen() {
       return;
     }
 
-    if (!company) return;
-
-    // Navigate to chat screen
-    router.push(`/messages/conv_${company.id}_${user.id}_${Date.now()}`);
+    // TODO: Implement actual like functionality with the database
+    console.log('Liked post:', postId);
   };
+  
+  const handleCreatePost = (content: string, postType: 'qudo' | 'claim') => {
+    if (!user || !company) return;
+    
+    // Create a new post
+    const newPost: CompanyPost = {
+      id: Date.now().toString(),
+      user_id: user.id,
+      company_id: company.id,
+      content,
+      photo_url: null,
+      post_type: postType,
+      likes_count: 0,
+      comments_count: 0,
+      created_at: new Date().toISOString(),
+      user_profiles: user,
+    };
 
-  const handleFileClaim = () => {
-    if (!user) {
-      Alert.alert(
-        'Sign In Required',
-        'Please sign in to file a claim',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Sign In', onPress: () => router.push('/(auth)/signin') }
-        ]
-      );
-      return;
-    }
-
-    if (!company) return;
-
-    // Navigate to file claim screen
-    router.push(`/claim/new?companyId=${company.id}&companyName=${company.name}`);
-  };
-
-  const handleWriteReview = () => {
-    if (!user) {
-      Alert.alert(
-        'Sign In Required',
-        'Please sign in to write a review',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Sign In', onPress: () => router.push('/(auth)/signin') }
-        ]
-      );
-      return;
-    }
-
-    if (!company) return;
-
-    // Navigate to write review screen
-    router.push(`/review/new?companyId=${company.id}&companyName=${company.name}`);
+    setPosts([newPost, ...posts]);
+    setShowCreatePost(false);
   };
 
   if (loading) {
@@ -255,16 +512,6 @@ export default function CompanyScreen() {
             </View>
           </View>
 
-          {/* LiveMood Widget */}
-          <View style={styles.widgetContainer}>
-            <LiveMoodWidget 
-              companyId={company.id} 
-              companyName={company.name}
-              showTitle={true}
-              compact={false}
-            />
-          </View>
-
           {/* Description */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>About</Text>
@@ -308,130 +555,50 @@ export default function CompanyScreen() {
             )}
           </View>
 
-          {/* Action Buttons */}
-          <View style={styles.actionButtons}>
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={handleStartChat}
-            >
-              <MessageCircle size={20} color="#FFFFFF" />
-              <Text style={styles.actionButtonText}>Live Chat</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.actionButton, styles.claimButton]}
-              onPress={handleFileClaim}
-            >
-              <MessageCircle size={20} color="#FFFFFF" />
-              <Text style={styles.actionButtonText}>File Claim</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.actionButton, styles.reviewButton]}
-              onPress={handleWriteReview}
-            >
-              <Star size={20} color="#FFFFFF" />
-              <Text style={styles.actionButtonText}>Write Review</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Reviews Section */}
+          {/* Posts Feed */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Reviews</Text>
+              <Text style={styles.sectionTitle}>Feed</Text>
               <TouchableOpacity style={styles.seeAllButton}>
                 <Text style={styles.seeAllText}>See All</Text>
               </TouchableOpacity>
             </View>
             
-            {company.reviews && company.reviews.length > 0 ? (
-              company.reviews.slice(0, 3).map((review) => (
-                <View key={review.id} style={styles.reviewCard}>
-                  <View style={styles.reviewHeader}>
-                    <View style={styles.reviewerInfo}>
-                      <Text style={styles.reviewerName}>
-                        {review.user_profiles?.first_name} {review.user_profiles?.last_name}
-                      </Text>
-                      <View style={styles.ratingContainer}>
-                        <Star size={14} color="#FFD700" fill="#FFD700" />
-                        <Text style={styles.ratingText}>{review.rating || 5}</Text>
-                      </View>
-                    </View>
-                    <Text style={styles.reviewDate}>
-                      {new Date(review.created_at || '').toLocaleDateString()}
-                    </Text>
-                  </View>
-                  <Text style={styles.reviewTitle}>{review.title}</Text>
-                  <Text style={styles.reviewContent}>{review.content}</Text>
-                </View>
+            {loadingPosts ? (
+              <ActivityIndicator size="large" color="#5ce1e6" style={styles.loadingIndicator} />
+            ) : posts.length > 0 ? (
+              posts.map(post => (
+                <PostCard 
+                  key={post.id} 
+                  post={post} 
+                  onLike={handleLikePost} 
+                />
               ))
             ) : (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyStateText}>No reviews yet. Be the first to review!</Text>
-                <TouchableOpacity 
-                  style={styles.emptyStateButton}
-                  onPress={handleWriteReview}
-                >
-                  <Text style={styles.emptyStateButtonText}>Write a Review</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-
-          {/* Claims Section */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Claims</Text>
-              <TouchableOpacity style={styles.seeAllButton}>
-                <Text style={styles.seeAllText}>See All</Text>
-              </TouchableOpacity>
-            </View>
-            
-            {company.claims && company.claims.length > 0 ? (
-              company.claims.slice(0, 3).map((claim) => (
-                <View key={claim.id} style={styles.claimCard}>
-                  <View style={styles.claimHeader}>
-                    <View style={styles.claimerInfo}>
-                      <Text style={styles.claimerName}>
-                        {claim.user_profiles?.first_name} {claim.user_profiles?.last_name}
-                      </Text>
-                      <View style={[
-                        styles.statusBadge,
-                        claim.status === 'resolved' && styles.resolvedBadge,
-                        claim.status === 'in_progress' && styles.inProgressBadge,
-                        claim.status === 'pending' && styles.pendingBadge,
-                        claim.status === 'rejected' && styles.rejectedBadge,
-                      ]}>
-                        <Text style={styles.statusText}>
-                          {claim.status === 'in_progress' ? 'In Progress' : 
-                           claim.status.charAt(0).toUpperCase() + claim.status.slice(1)}
-                        </Text>
-                      </View>
-                    </View>
-                    <Text style={styles.claimDate}>
-                      {new Date(claim.created_at || '').toLocaleDateString()}
-                    </Text>
-                  </View>
-                  <Text style={styles.claimTitle}>{claim.title}</Text>
-                  <Text style={styles.claimContent}>{claim.description}</Text>
-                  <View style={styles.claimCategory}>
-                    <Text style={styles.claimCategoryText}>{claim.category}</Text>
-                  </View>
-                </View>
-              ))
-            ) : (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyStateText}>No claims filed yet.</Text>
-                <TouchableOpacity 
-                  style={styles.emptyStateButton}
-                  onPress={handleFileClaim}
-                >
-                  <Text style={styles.emptyStateButtonText}>File a Claim</Text>
-                </TouchableOpacity>
+              <View style={styles.emptyFeed}>
+                <Text style={styles.emptyFeedText}>No posts yet</Text>
+                <Text style={styles.emptyFeedSubtext}>Be the first to share your experience</Text>
               </View>
             )}
           </View>
         </ScrollView>
+        
+        {/* Floating Action Button */}
+        <TouchableOpacity 
+          style={styles.floatingButton}
+          onPress={() => setShowCreatePost(true)}
+        >
+          <Plus size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+        
+        {/* Create Post Modal */}
+        <CreatePostModal
+          visible={showCreatePost}
+          onClose={() => setShowCreatePost(false)}
+          onSubmit={handleCreatePost}
+          companyId={company.id}
+          companyName={company.name}
+        />
       </SafeAreaView>
     </View>
   );
@@ -549,15 +716,11 @@ const styles = StyleSheet.create({
   followButton: {
     width: 40,
     height: 40,
-    marginTop: -20, // Move the button 20% up
+    marginTop: -20,
     borderRadius: 20,
     backgroundColor: '#2A2A2A',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  widgetContainer: {
-    paddingHorizontal: 20,
-    marginTop: 8,
   },
   section: {
     padding: 20,
@@ -600,179 +763,220 @@ const styles = StyleSheet.create({
   contactText: {
     fontSize: 16,
     color: '#FFFFFF',
-    marginLeft: 16,
+    marginLeft: 16, 
   },
-  actionButtons: {
+  postCard: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  postHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatarContainer: {
+    marginRight: 12,
+  },
+  userAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  userAvatarPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#2A2A2A',
+  },
+  userDetails: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  postTime: {
+    fontSize: 12,
+    color: '#666666',
+  },
+  postTypeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  qudoBadge: {
+    backgroundColor: '#27AE60',
+  },
+  claimBadge: {
+    backgroundColor: '#E74C3C',
+  },
+  postTypeBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  postContent: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    lineHeight: 24,
+    marginBottom: 12,
+  },
+  postImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    marginBottom: 12,
+    backgroundColor: '#2A2A2A',
+  },
+  postActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  likeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    padding: 8,
+  },
+  likeCount: {
+    fontSize: 14,
+    color: '#666666',
+  },
+  likedText: {
+    color: '#5ce1e6',
+    fontWeight: '600',
+  },
+  floatingButton: {
+    position: 'absolute',
+    right: 20,
+    bottom: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#5ce1e6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+  },
+  emptyFeed: {
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyFeedText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  emptyFeedSubtext: {
+    fontSize: 14,
+    color: '#666666',
+    textAlign: 'center',
+  },
+  loadingIndicator: {
     padding: 20,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '90%',
+    backgroundColor: '#1A1A1A',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  closeButton: {
+    fontSize: 16,
+    color: '#5ce1e6',
+    fontWeight: '600',
+  },
+  postTypeSelector: {
+    flexDirection: 'row',
+    marginBottom: 20,
     gap: 12,
   },
-  actionButton: {
+  postTypeButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    backgroundColor: '#2A2A2A',
+  },
+  activePostTypeButton: {
+    backgroundColor: '#5ce1e6',
+    borderColor: '#5ce1e6',
+  },
+  postTypeButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#CCCCCC',
+  },
+  activePostTypeButtonText: {
+    color: '#FFFFFF',
+  },
+  companyLabel: {
+    fontSize: 16,
+    color: '#CCCCCC',
+    marginBottom: 12,
+  },
+  contentInput: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: 12,
+    padding: 16,
+    color: '#FFFFFF',
+    fontSize: 16,
+    minHeight: 120,
+    textAlignVertical: 'top',
+    marginBottom: 20,
+  },
+  submitButton: {
     backgroundColor: '#5ce1e6',
     paddingVertical: 16,
-    borderRadius: 16,
-  },
-  claimButton: {
-    backgroundColor: '#FF6B6B',
-  },
-  reviewButton: {
-    backgroundColor: '#FFD700',
-  },
-  actionButtonText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  reviewCard: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#2A2A2A',
-  },
-  reviewHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  reviewerInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  reviewerName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#2A2A2A',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
     borderRadius: 12,
-  },
-  ratingText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  reviewDate: {
-    fontSize: 12,
-    color: '#666666',
-  },
-  reviewTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 8,
-  },
-  reviewContent: {
-    fontSize: 16,
-    color: '#CCCCCC',
-    lineHeight: 24,
-  },
-  claimCard: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#2A2A2A',
-  },
-  claimHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
   },
-  claimerInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  claimerName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  pendingBadge: {
-    backgroundColor: '#F39C12',
-  },
-  inProgressBadge: {
-    backgroundColor: '#3498DB',
-  },
-  resolvedBadge: {
-    backgroundColor: '#27AE60',
-  },
-  rejectedBadge: {
-    backgroundColor: '#E74C3C',
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  claimDate: {
-    fontSize: 12,
-    color: '#666666',
-  },
-  claimTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 8,
-  },
-  claimContent: {
-    fontSize: 16,
-    color: '#CCCCCC',
-    lineHeight: 24,
-    marginBottom: 12,
-  },
-  claimCategory: {
-    alignSelf: 'flex-start',
+  submitButtonDisabled: {
     backgroundColor: '#2A2A2A',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
   },
-  claimCategoryText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#CCCCCC',
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  emptyStateText: {
+  submitButtonText: {
     fontSize: 16,
-    color: '#666666',
-    marginBottom: 16,
-  },
-  emptyStateButton: {
-    backgroundColor: '#5ce1e6',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 16,
-  },
-  emptyStateButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#FFFFFF',
   },
   loadingContainer: {
