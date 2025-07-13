@@ -104,7 +104,15 @@ export interface PostComment {
   user_id: string;
   content: string;
   created_at: string;
+  likes_count?: number;
   user_profiles?: UserProfile;
+}
+
+export interface CommentLike {
+  id: string;
+  comment_id: string;
+  user_id: string;
+  created_at: string;
 }
 
 export interface FullCompanyProfile extends Company {
@@ -623,6 +631,7 @@ export const likePost = async (postId: string, userId: string): Promise<void> =>
   }
 };
 
+// Comment-related functions
 export const getPostComments = async (postId: string): Promise<PostComment[]> => {
   try {
     console.log('Database: Fetching comments for post:', postId);
@@ -686,6 +695,73 @@ export const addComment = async (postId: string, userId: string, content: string
   } catch (error) {
     console.error('Database: Error in addComment:', error);
     throw error;
+  }
+};
+
+export const likeComment = async (commentId: string, userId: string): Promise<void> => {
+  try {
+    console.log('Database: Liking comment:', commentId, 'by user:', userId);
+    
+    // Check if user already liked this comment
+    const { data: existingLike } = await supabase
+      .from('post_comment_likes')
+      .select('id')
+      .eq('comment_id', commentId)
+      .eq('user_id', userId)
+      .single();
+
+    if (existingLike) {
+      // Unlike the comment
+      const { error: deleteError } = await supabase
+        .from('post_comment_likes')
+        .delete()
+        .eq('comment_id', commentId)
+        .eq('user_id', userId);
+
+      if (deleteError) {
+        console.error('Database: Error unliking comment:', deleteError);
+        throw deleteError;
+      }
+    } else {
+      // Like the comment
+      const { error: insertError } = await supabase
+        .from('post_comment_likes')
+        .insert({
+          comment_id: commentId,
+          user_id: userId,
+        });
+
+      if (insertError) {
+        console.error('Database: Error liking comment:', insertError);
+        throw insertError;
+      }
+    }
+  } catch (error) {
+    console.error('Database: Error in likeComment:', error);
+    throw error;
+  }
+};
+
+export const checkCommentLiked = async (commentId: string, userId: string): Promise<boolean> => {
+  try {
+    if (!userId) return false;
+    
+    const { data, error } = await supabase
+      .from('post_comment_likes')
+      .select('id')
+      .eq('comment_id', commentId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Database: Error checking comment like:', error);
+      return false;
+    }
+
+    return !!data;
+  } catch (error) {
+    console.error('Database: Error in checkCommentLiked:', error);
+    return false;
   }
 };
 
