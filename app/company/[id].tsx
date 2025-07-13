@@ -819,66 +819,6 @@ export default function CompanyScreen() {
             </View>
           </View>
         </Modal>
-        />
-        
-        {/* Comments Modal */}
-        <Modal
-          visible={!!showComments}
-          animationType="slide"
-          transparent={true}
-          onRequestClose={() => setShowComments(null)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.commentsModalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Comments</Text>
-                <TouchableOpacity onPress={() => setShowComments(null)}>
-                  <Text style={styles.closeButton}>Close</Text>
-                </TouchableOpacity>
-              </View>
-              
-              {loadingComments ? (
-                <ActivityIndicator size="large" color="#5ce1e6" style={styles.loadingIndicator} />
-              ) : (
-                <ScrollView style={styles.commentsList}>
-                  {comments.length > 0 ? (
-                    comments.map(comment => (
-                      <CommentCard 
-                        key={comment.id} 
-                        comment={comment} 
-                        onLike={handleLikeComment} 
-                      />
-                    ))
-                  ) : (
-                    <View style={styles.emptyComments}>
-                      <Text style={styles.emptyCommentsText}>No comments yet</Text>
-                      <Text style={styles.emptyCommentsSubtext}>Be the first to comment</Text>
-                    </View>
-                  )}
-                </ScrollView>
-              )}
-              
-              {/* Comment Input */}
-              <View style={styles.commentInputContainer}>
-                <TextInput
-                  style={styles.commentInput}
-                  placeholder="Add a comment..."
-                  placeholderTextColor="#666666"
-                  value={newComment}
-                  onChangeText={setNewComment}
-                  multiline
-                />
-                <TouchableOpacity 
-                  style={[styles.sendButton, !newComment.trim() && styles.sendButtonDisabled]}
-                  onPress={handleAddComment}
-                  disabled={!newComment.trim()}
-                >
-                  <Send size={20} color={newComment.trim() ? "#5ce1e6" : "#666666"} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
       </SafeAreaView>
     </View>
   );
