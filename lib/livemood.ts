@@ -62,15 +62,15 @@ export const getCompanyLiveMood = async (
       .from('company_livemood_stats')
       .select('*')
       .eq('company_id', companyId)
-      .single();
+      .maybeSingle();
 
-    if (statsError && statsError.code !== 'PGRST116') {
+    if (statsError) {
       console.error('LiveMood: Error fetching stats:', statsError);
       throw statsError;
     }
 
-    // If no stats found (PGRST116), return default values
-    if (statsError && statsError.code === 'PGRST116') {
+    // If no stats found, return default values
+    if (!stats) {
       console.log('LiveMood: No stats found for company, returning defaults');
       return {
         totalVotes: 0,
@@ -94,9 +94,11 @@ export const getCompanyLiveMood = async (
         .eq('user_id', userId)
         .maybeSingle();
 
-      if (voteError && voteError.code !== 'PGRST116') {
+      if (voteError) {
         console.error('LiveMood: Error fetching user vote:', voteError);
-      } else if (vote) {
+      }
+      
+      if (vote) {
         userVote = vote.vote_type;
       }
     }
