@@ -96,7 +96,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => {
           reject(new Error('Profile fetch timeout - request took too long'));
-        }, 10000); // 10 second timeout
+        }, 30000); // 30 second timeout
       });
 
       // Create the supabase query promise
