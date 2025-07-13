@@ -452,7 +452,7 @@ export default function CompanyProfileScreen() {
           </View>
 
           {/* Action Buttons */}
-          <View style={styles.actionButtons}>
+          <View style={styles.actionButtonsRow}>
             <TouchableOpacity 
               style={styles.actionButton}
               onPress={() => setShowReviewModal(true)}
@@ -467,6 +467,14 @@ export default function CompanyProfileScreen() {
             >
               <MessageCircle size={20} color="#5ce1e6" />
               <Text style={[styles.actionButtonText, styles.secondaryButtonText]}>File Claim</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.secondaryButton]}
+              onPress={handleStartChat}
+            >
+              <Send size={20} color="#5ce1e6" />
+              <Text style={[styles.actionButtonText, styles.secondaryButtonText]}>Message</Text>
             </TouchableOpacity>
           </View>
 
@@ -704,28 +712,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#2A2A2A',
   },
   headerRight: {
-    width: 40,
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+  companyName: {
+    fontSize: 24,
+    fontWeight: '700',
     color: '#FFFFFF',
-  },
-  chatButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 12,
-    backgroundColor: '#5ce1e6',
-    marginTop: 4,
-    alignSelf: 'flex-start',
-    gap: 4,
-  },
-  chatButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
+    marginBottom: 4,
   },
   content: {
     flex: 1,
@@ -867,7 +859,7 @@ const styles = StyleSheet.create({
     color: '#CCCCCC',
     flex: 1,
   },
-  actionButtons: {
+  actionButtonsRow: {
     flexDirection: 'row',
     padding: 20,
     gap: 12,
@@ -877,13 +869,13 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#5ce1e6',
-    paddingVertical: 16,
+    paddingVertical: 12,
     borderRadius: 12,
-    gap: 8,
+    gap: 6,
   },
   secondaryButton: {
     backgroundColor: '#1A1A1A',
@@ -892,7 +884,7 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#FFFFFF',
   },
   secondaryButtonText: {
