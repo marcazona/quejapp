@@ -778,6 +778,7 @@ const styles = StyleSheet.create({
   postHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
     marginBottom: 12,
   },
   userInfo: {
@@ -800,6 +801,7 @@ const styles = StyleSheet.create({
   },
   userDetails: {
     flex: 1,
+    marginRight: 10,
   },
   userName: {
     fontSize: 16,
@@ -812,9 +814,12 @@ const styles = StyleSheet.create({
     color: '#666666',
   },
   postTypeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    minWidth: 60,
+    alignItems: 'center',
   },
   qudoBadge: {
     backgroundColor: '#27AE60',
@@ -826,6 +831,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#FFFFFF',
+    textAlign: 'center',
   },
   postContent: {
     fontSize: 16,
