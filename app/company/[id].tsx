@@ -17,7 +17,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { ArrowLeft, MapPin, Phone, Mail, Globe, Star, Shield, Clock, Users, Building2, Send, X, Plus, User } from 'lucide-react-native';
+import { ArrowLeft, MapPin, Phone, Mail, Globe, Star, Shield, Clock, Users, Building2, Send, X, Plus, User, MessageCircle } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   getCompanyById,
