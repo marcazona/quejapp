@@ -69,6 +69,21 @@ export const getCompanyLiveMood = async (
       throw statsError;
     }
 
+    // If no stats found (PGRST116), return default values
+    if (statsError && statsError.code === 'PGRST116') {
+      console.log('LiveMood: No stats found for company, returning defaults');
+      return {
+        totalVotes: 0,
+        positiveVotes: 0,
+        negativeVotes: 0,
+        userVote: null,
+        trend: 'stable',
+        lastUpdated: new Date().toISOString(),
+        positivePercentage: 0,
+        negativePercentage: 0,
+      };
+    }
+
     // Get user's vote if userId provided
     let userVote: 'positive' | 'negative' | null = null;
     if (userId) {
