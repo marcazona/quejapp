@@ -322,10 +322,6 @@ export default function CompanyScreen() {
   const [comments, setComments] = useState<PostComment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
   const [newComment, setNewComment] = useState('');
-  const [showComments, setShowComments] = useState<string | null>(null);
-  const [comments, setComments] = useState<PostComment[]>([]);
-  const [loadingComments, setLoadingComments] = useState(false);
-  const [newComment, setNewComment] = useState('');
   const [showCreatePost, setShowCreatePost] = useState(false);
 
   useEffect(() => {
