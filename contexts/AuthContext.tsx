@@ -126,7 +126,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
         
         setError(`Failed to load user profile: ${error.message}`);
-        setUser(null);
         setIsLoading(false);
       } else if (data) {
         console.log('AuthProvider: User profile loaded successfully:', data.first_name, data.last_name);
@@ -149,11 +148,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (isNetworkError(error) || error.message?.includes('timeout')) {
         console.log('AuthProvider: Network/timeout error in catch, continuing with limited functionality');
         // Don't set error state for network issues, just log and continue
+        setIsLoading(false);
+        return;
       } else {
         setError(error.message || 'Failed to load user profile');
+        setIsLoading(false);
       }
-      setUser(null);
-      setIsLoading(false);
     }
   }, []);
 
