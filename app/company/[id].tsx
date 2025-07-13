@@ -17,7 +17,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { ArrowLeft, MapPin, Phone, Mail, Globe, Star, Shield, Clock, Users, Building2, Send, X, Plus, User, MessageCircle } from 'lucide-react-native';
+import { ArrowLeft, MapPin, Phone, Mail, Globe, Star, Shield, Clock, Users, Building2, Send, X, Plus, User, MessageCircle, Heart } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   getCompanyById,
@@ -179,6 +179,7 @@ export default function CompanyProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'qudos' | 'claims'>('qudos');
+  const [isFollowing, setIsFollowing] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [reviewData, setReviewData] = useState<ReviewModalData>({
@@ -234,6 +235,23 @@ export default function CompanyProfileScreen() {
       console.error('Error starting chat:', error);
       Alert.alert('Error', 'Failed to start chat. Please try again.');
     }
+  };
+
+  const handleToggleFollow = () => {
+    if (!user) {
+      Alert.alert('Sign In Required', 'Please sign in to follow this company.');
+      return;
+    }
+    
+    setIsFollowing(!isFollowing);
+    
+    // Show feedback to the user
+    if (!isFollowing) {
+      Alert.alert('Success', `You are now following ${company.name}. You'll see updates in your feed.`);
+    }
+    
+    // TODO: Implement actual follow/unfollow functionality with database
+    // This would involve creating a new table for company_followers and adding/removing entries
   };
 
   const handleSubmitReview = async () => {
@@ -362,11 +380,22 @@ export default function CompanyProfileScreen() {
           <TouchableOpacity 
             style={styles.backButton}
             onPress={() => router.back()}
+            accessibilityLabel="Go back"
           >
             <ArrowLeft size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Company Profile</Text>
-          <View style={styles.headerRight} />
+          <TouchableOpacity 
+            style={styles.followButton}
+            onPress={handleToggleFollow}
+            accessibilityLabel={isFollowing ? "Unfollow company" : "Follow company"}
+          >
+            <Heart 
+              size={24} 
+              color={isFollowing ? "#E74C3C" : "#FFFFFF"} 
+              fill={isFollowing ? "#E74C3C" : "transparent"} 
+            />
+          </TouchableOpacity>
         </View>
 
         <ScrollView 
@@ -716,6 +745,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#2A2A2A',
   },
   headerRight: {
+    width: 40,
+  },
+  followButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#2A2A2A',
   },
   companyName: {
     fontSize: 24,
