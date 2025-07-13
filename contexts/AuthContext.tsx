@@ -3,6 +3,9 @@ import { Platform } from 'react-native';
 import { supabase, type Database } from '@/lib/supabase';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 
+// Global flag to prevent redundant auth initialization across component remounts
+let _authInitialized = false;
+
 type UserProfile = Database['public']['Tables']['user_profiles']['Row'];
 
 interface AuthContextType {
@@ -48,7 +51,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
-  const initialized = useRef(false);
 
   console.log('AuthProvider: Rendering - isLoading:', isLoading, 'error:', error, 'user:', !!user);
 
@@ -176,12 +178,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [fetchUserProfile]);
 
   const initializeAuth = useCallback(async () => {
-    if (initialized.current || !mounted.current) {
+    if (_authInitialized || !mounted.current) {
       console.log('AuthProvider: Already initialized or unmounted, skipping...');
       return;
     }
     
-    initialized.current = true;
+    _authInitialized = true;
     
     try {
       console.log('AuthProvider: Starting authentication initialization...');
@@ -244,7 +246,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     mounted.current = true;
     
     // Prevent multiple initializations
-    if (initialized.current) {
+    if (_authInitialized) {
       console.log('AuthProvider: Already initialized, skipping setup');
       return;
     }
