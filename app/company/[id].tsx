@@ -40,6 +40,7 @@ interface CompanyPost {
 const PostCard = ({ post, onLike }: { 
   post: CompanyPost; 
   onLike: (postId: string) => void;
+  onComment: (postId: string) => void;
 }) => { 
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(post.likes_count || 0);
@@ -112,6 +113,7 @@ const PostCard = ({ post, onLike }: {
           <Text style={[styles.likeCount, isLiked && styles.likedText]}>{likesCount}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.commentButton} onPress={() => handleViewComments(post.id)}>
+        <TouchableOpacity style={styles.commentButton} onPress={() => onComment(post.id)}>
           <MessageCircle size={18} color="#666666" />
           <Text style={styles.commentCount}>{post.comments_count || 0}</Text>
         </TouchableOpacity>
@@ -707,6 +709,7 @@ export default function CompanyScreen() {
                   <PostCard 
                     post={post} 
                     onLike={handleLikePost}
+                    onComment={handleViewComments}
                   />
                 </View>
               ))
