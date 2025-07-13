@@ -181,7 +181,7 @@ export const getDiscoveryCompanies = async (userLocation?: { latitude: number; l
 export const getCompanyById = async (companyId: string): Promise<FullCompanyProfile | null> => {
   try {
     console.log('Database: Fetching company by ID:', companyId);
-    
+
     const { data: company, error: companyError } = await supabase
       .from('companies')
       .select('*')
@@ -196,51 +196,27 @@ export const getCompanyById = async (companyId: string): Promise<FullCompanyProf
     if (!company) {
       return null;
     }
-
-    // Fetch reviews
-    const { data: reviews, error: reviewsError } = await supabase
-      .from('company_reviews')
-      .select(`
-        *,
-        user_profiles (
-          id,
-          first_name,
-          last_name,
-          avatar_url,
-          verified
-        )
-      `)
+    
+    // Count qudos and claims instead of fetching them
+    const { data: qudosCount, error: qudosError } = await supabase
+      .from('posts')
+      .select('id', { count: 'exact' })
       .eq('company_id', companyId)
-      .order('created_at', { ascending: false });
-
-    if (reviewsError) {
-      console.error('Database: Error fetching reviews:', reviewsError);
-    }
-
-    // Fetch claims
-    const { data: claims, error: claimsError } = await supabase
-      .from('company_claims')
-      .select(`
-        *,
-        user_profiles (
-          id,
-          first_name,
-          last_name,
-          avatar_url,
-          verified
-        )
-      `)
+      .eq('post_type', 'qudo');
+      
+    const { data: claimsCount, error: claimsError } = await supabase
+      .from('posts')
+      .select('id', { count: 'exact' })
       .eq('company_id', companyId)
-      .order('created_at', { ascending: false });
-
-    if (claimsError) {
-      console.error('Database: Error fetching claims:', claimsError);
-    }
-
+      .eq('post_type', 'claim');
+    
+    if (qudosError) console.error('Database: Error counting qudos:', qudosError);
+    if (claimsError) console.error('Database: Error counting claims:', claimsError);
+    
     return {
       ...company,
-      reviews: reviews || [],
-      claims: claims || [],
+      total_reviews: qudosCount?.length || 0,
+      total_claims: claimsCount?.length || 0,
     };
   } catch (error) {
     console.error('Database: Error in getCompanyById:', error);
@@ -461,6 +437,38 @@ export const getUserPosts = async (currentUserId?: string): Promise<Post[]> => {
   }
 };
 
+// Get posts for a specific company
+export const getUserPostsForCompany = async (companyId: string): Promise<Post[]> => {
+  try {
+    console.log('Database: Fetching posts for company:', companyId);
+    
+    const { data: posts, error } = await supabase
+      .from('posts')
+      .select(`
+        *,
+        user_profiles (
+          id,
+          first_name,
+          last_name,
+          avatar_url,
+          verified
+        )
+      `)
+      .eq('company_id', companyId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Database: Error fetching company posts:', error);
+      return [];
+    }
+
+    return posts || [];
+  } catch (error) {
+    console.error('Database: Error in getUserPostsForCompany:', error);
+    return [];
+  }
+};
+
 export const createPost = async (userId: string, content: string, photoUrl?: string): Promise<Post> => {
   try {
     console.log('Database: Creating new post for user:', userId);
@@ -494,6 +502,59 @@ export const createPost = async (userId: string, content: string, photoUrl?: str
     return post;
   } catch (error) {
     console.error('Database: Error in createPost:', error);
+    throw error;
+  }
+};
+
+// Create a post about a company
+export const createCompanyPost = async (
+  userId: string, 
+  companyId: string, 
+  content: string, 
+  postType: 'qudo' | 'claim',
+  photoUrl?: string
+): Promise<Post> => {
+  try {
+    console.log('Database: Creating new post for company:', companyId);
+    
+    const { data: post, error } = await supabase
+      .from('posts')
+      .insert({
+        user_id: userId,
+        company_id: companyId,
+        content,
+        photo_url: photoUrl,
+        post_type: postType,
+        likes_count: 0,
+        comments_count: 0,
+      })
+      .select(`
+        *,
+        user_profiles (
+          id,
+          first_name,
+          last_name,
+          avatar_url,
+          verified
+        )
+      `)
+      .single();
+
+    if (error) {
+      console.error('Database: Error creating company post:', error);
+      throw error;
+    }
+
+    // Update company stats based on post type
+    if (postType === 'qudo') {
+      await supabase.rpc('increment_company_reviews', { company_id: companyId });
+    } else if (postType === 'claim') {
+      await supabase.rpc('increment_company_claims', { company_id: companyId });
+    }
+
+    return post;
+  } catch (error) {
+    console.error('Database: Error in createCompanyPost:', error);
     throw error;
   }
 };
