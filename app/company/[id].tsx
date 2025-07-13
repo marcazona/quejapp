@@ -514,47 +514,6 @@ export default function CompanyScreen() {
     console.log('Liked post:', postId);
   };
   
-  const handleViewComments = async (postId: string) => {
-    try {
-      setLoadingComments(true);
-      setShowComments(postId);
-      
-      const postComments = await getPostComments(postId);
-      setComments(postComments);
-    } catch (error) {
-      console.error('Error loading comments:', error);
-      Alert.alert('Error', 'Failed to load comments');
-    } finally {
-      setLoadingComments(false);
-    }
-  };
-
-  const handleAddComment = async () => {
-    if (!user || !showComments || !newComment.trim()) return;
-    
-    try {
-      const comment = await addComment(showComments, user.id, newComment.trim());
-      setComments(prev => [...prev, comment]);
-      setNewComment('');
-    } catch (error) {
-      console.error('Error adding comment:', error);
-      Alert.alert('Error', 'Failed to add comment');
-    }
-  };
-
-  const handleLikeComment = async (commentId: string) => {
-    if (!user) {
-      Alert.alert('Sign In Required', 'Please sign in to like comments');
-      return;
-    }
-    
-    try {
-      await likeComment(commentId, user.id);
-    } catch (error) {
-      console.error('Error liking comment:', error);
-    }
-  };
-  
   const handleCreatePost = (content: string, postType: 'qudo' | 'claim') => {
     if (!user || !company) return;
     
