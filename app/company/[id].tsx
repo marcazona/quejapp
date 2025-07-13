@@ -366,12 +366,7 @@ export default function CompanyProfileScreen() {
             <ArrowLeft size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Company Profile</Text>
-          <TouchableOpacity 
-            style={styles.chatButton}
-            onPress={handleStartChat}
-          >
-            <MessageCircle size={20} color="#FFFFFF" />
-          </TouchableOpacity>
+          <View style={styles.headerRight} />
         </View>
 
         <ScrollView 
@@ -400,6 +395,13 @@ export default function CompanyProfileScreen() {
             
             <View style={styles.companyInfo}>
               <Text style={styles.companyName}>{company.name}</Text>
+              <TouchableOpacity 
+                style={styles.chatButton}
+                onPress={handleStartChat}
+              >
+                <MessageCircle size={16} color="#FFFFFF" />
+                <Text style={styles.chatButtonText}>Chat</Text>
+              </TouchableOpacity>
               <Text style={styles.companyIndustry}>{company.industry}</Text>
               
               {/* Removed rating stars section */}
@@ -701,15 +703,29 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#2A2A2A',
   },
+  headerRight: {
+    width: 40,
+  },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#FFFFFF',
   },
   chatButton: {
-    padding: 8,
-    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
     backgroundColor: '#5ce1e6',
+    marginTop: 4,
+    alignSelf: 'flex-start',
+    gap: 4,
+  },
+  chatButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
   },
   content: {
     flex: 1,
