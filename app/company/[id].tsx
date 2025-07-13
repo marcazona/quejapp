@@ -397,10 +397,21 @@ export default function CompanyProfileScreen() {
               <Text style={styles.companyName}>{company.name}</Text>
               <Text style={styles.companyIndustry}>{company.industry}</Text>
               
-              {/* Removed rating stars section */}
-              <Text style={styles.ratingText}>
-                {company.total_reviews || 0} Qudos
-              </Text>
+              <View style={styles.statsRow}>
+                <View style={styles.statItem}>
+                  <Star size={14} color="#FFD700" />
+                  <Text style={styles.statText}>
+                    {company.total_reviews || 0} Qudos
+                  </Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <MessageCircle size={14} color="#E67E22" />
+                  <Text style={styles.statText}>
+                    {company.total_claims || 0} Claims
+                  </Text>
+                </View>
+              </View>
             </View>
           </View>
 
@@ -815,6 +826,27 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   ratingText: {
+    fontSize: 14,
+    color: '#CCCCCC',
+    marginRight: 8,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  statDivider: {
+    width: 1,
+    height: 14,
+    backgroundColor: '#2A2A2A',
+    marginHorizontal: 12,
+  },
+  statText: {
     fontSize: 14,
     color: '#CCCCCC',
   },
