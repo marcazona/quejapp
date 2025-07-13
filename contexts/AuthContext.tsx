@@ -89,11 +89,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('AuthProvider: Fetching user profile for userId:', userId);
     
     try {
-      const { data, error } = await supabase
+      // Create a timeout promise
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Profile fetch timeout - request took too long'));
+        }, 10000); // 10 second timeout
+      });
+
+      // Create the supabase query promise
+      const queryPromise = supabase
         .from('user_profiles')
         .select('*')
         .eq('id', userId)
         .maybeSingle();
+
+      // Race the query against the timeout
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
 
       if (!mounted.current) {
         console.log('AuthProvider: Component unmounted during fetch');
@@ -103,7 +114,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (error) {
         console.error('AuthProvider: Error fetching user profile:', error);
         
-        if (isNetworkError(error)) {
+        if (isNetworkError(error) || error.message?.includes('timeout')) {
           setError('Unable to connect to the server. Operating in offline mode.');
           setUser(null);
           setIsLoading(false);
@@ -131,7 +142,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       console.error('AuthProvider: Exception in fetchUserProfile:', error);
       
-      if (isNetworkError(error)) {
+      if (isNetworkError(error) || error.message?.includes('timeout')) {
         setError('Unable to connect to the server. Operating in offline mode.');
       } else {
         setError(error.message || 'Failed to load user profile');
