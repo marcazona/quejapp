@@ -220,7 +220,14 @@ export default function CompanyScreen() {
             </View>
             
             <View style={styles.companyDetails}>
-              <Text style={styles.companyName}>{company.name}</Text>
+              <View style={styles.companyNameRow}>
+                <Text style={styles.companyName}>{company.name}</Text>
+                {company.verified && (
+                  <View style={styles.verifiedBadgeInline}>
+                    <Shield size={12} color="#FFFFFF" />
+                  </View>
+                )}
+              </View>
               <Text style={styles.companyIndustry}>{company.industry}</Text>
               
               <View style={styles.companyInfoRow}>
@@ -504,14 +511,27 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#1A1A1A',
   },
+  verifiedBadgeInline: {
+    backgroundColor: '#27AE60',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
   companyDetails: {
     flex: 1,
+  },
+  companyNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
   },
   companyName: {
     fontSize: 24,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 4,
   },
   companyIndustry: {
     fontSize: 16,
